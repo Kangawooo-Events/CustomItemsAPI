@@ -62,7 +62,7 @@ public abstract class CustomItemData {
         return safe;
     }
 
-    public LiteralArgumentBuilder<CommandSourceStack> giveCommand()
+    public LiteralArgumentBuilder<CommandSourceStack> getGiveCommand()
     {
         return Commands.literal(getName()).executes(context -> {
 

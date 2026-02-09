@@ -5,6 +5,8 @@ import arnett.customItemsAPI.CustomItems.CustomItemData;
 import arnett.customItemsAPI.CustomItems.Useable.CustomUsableData;
 import arnett.customItemsAPI.Listeners.GeneralItemListener;
 import com.jeff_media.customblockdata.CustomBlockData;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.persistence.PersistentDataContainerView;
 import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
@@ -16,6 +18,7 @@ import org.bukkit.inventory.Recipe;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -31,6 +34,8 @@ public class CustomItemManager {
     {
         this.plugin = plugin;
 
+        ArrayList<LiteralArgumentBuilder<CommandSourceStack>> commands = new ArrayList<>();
+
         //fill items map
         fillItemMap(items);
 
@@ -38,6 +43,9 @@ public class CustomItemManager {
             //set any recipes
             registerRecipes(item);
             registerEvents(item);
+
+            //get the list of give command arguments
+            commands.add(item.getGiveCommand());
         });
 
         //create one listener for the general events we need to listen to
@@ -46,14 +54,17 @@ public class CustomItemManager {
         //register general item listener
         plugin.getServer().getPluginManager().registerEvents(generalListener, plugin);
 
-        //get the list of give command arguments
+
 
         //register the give commands of the items
-        new LiteralBranchCommand(plugin.getName(), List.of(
-           new LiteralBranchCommand("give", List.of(
-                //all the give items
-           ))
-        ));
+        LiteralArgumentBuilder<CommandSourceStack> rootCommand
+                = new LiteralBranchCommand(plugin.getName(), List.of()).getCommand();
+
+        commands.forEach(cmd -> {
+            rootCommand.then(cmd);
+        });
+
+        rootCommand.build();
     }
 
     public void registerEvents(CustomItemData item)
