@@ -1,7 +1,8 @@
 package arnett.customItemsAPI.CustomItems.CustomBlockTypes.BlockState;
 
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlaceableReceiver;
-import arnett.customItemsAPI.CustomItems.CustomItemManager;
+import arnett.customItemsAPI.CustomItemManager;
+import arnett.customItemsAPI.CustomItems.CustomItemData;
 import arnett.customItemsAPI.CustomItemsAPI;
 import com.jeff_media.customblockdata.CustomBlockData;
 import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
@@ -33,8 +34,11 @@ public abstract class BlockStatePlaceableReceiver extends PlaceableReceiver {
         //create the block's pdc
         PersistentDataContainer customBlockData = new CustomBlockData(e.getBlock(), CustomItemsAPI.singleton);
 
+        //set the generic tag to tell it is a custom block
+        customBlockData.set(CustomItemData.customItemTag, PersistentDataType.STRING, itemData.getIdentifier().toString());
+
         //set this as the item (boolean and true don't really matter here we just check that it has this later)
-        customBlockData.set(itemData.getItemIdentifierKey(), PersistentDataType.BOOLEAN, true);
+        customBlockData.set(itemData.getIdentifier(), PersistentDataType.BOOLEAN, true);
 
         //Link this block to the display
         customBlockData.set(

@@ -5,12 +5,14 @@ import arnett.customItemsAPI.CustomItems.CustomBlockTypes.CustomPlaceableData;
 import arnett.customItemsAPI.CustomItems.Directionality;
 import arnett.customItemsAPI.CustomItemsAPI;
 import com.jeff_media.customblockdata.CustomBlockData;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.ItemStack;
@@ -21,6 +23,8 @@ import java.util.UUID;
 public abstract class CustomBlockStatePlaceableData extends CustomPlaceableData {
 
     protected abstract BlockData getOverrideBlockData();
+
+    private UUID displayEntityID;
 
     public boolean isItem(Block block)
     {
@@ -35,7 +39,7 @@ public abstract class CustomBlockStatePlaceableData extends CustomPlaceableData 
         }
 
         //only then check if it has the specific namespace
-        return new CustomBlockData(block, CustomItemsAPI.singleton).has(getItemIdentifierKey());
+        return new CustomBlockData(block, CustomItemsAPI.singleton).has(getIdentifier());
     }
 
     public UUID createDisplay(Location spot, double rollRot)
@@ -57,7 +61,9 @@ public abstract class CustomBlockStatePlaceableData extends CustomPlaceableData 
 
         });
 
-        return  display.getUniqueId();
+        displayEntityID = displayEntityID;
+
+        return  displayEntityID;
     }
 
     public UUID createDisplay(Location spot, BlockPlaceEvent e, Directionality directionality)
@@ -147,5 +153,15 @@ public abstract class CustomBlockStatePlaceableData extends CustomPlaceableData 
         }
 
         return createDisplay(rotatedSpot, zRot);
+    }
+
+    public Entity getDisplayEntity()
+    {
+        return Bukkit.getEntity(displayEntityID);
+    }
+
+    public UUID getDisplayEntityID()
+    {
+        return displayEntityID;
     }
 }

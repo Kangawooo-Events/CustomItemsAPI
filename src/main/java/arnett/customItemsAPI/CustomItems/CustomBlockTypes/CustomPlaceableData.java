@@ -1,21 +1,34 @@
 package arnett.customItemsAPI.CustomItems.CustomBlockTypes;
 
+import arnett.customItemsAPI.CustomItemManager;
 import arnett.customItemsAPI.CustomItems.CustomItemData;
 import arnett.customItemsAPI.CustomItems.Directionality;
 import arnett.customItemsAPI.CustomItemsAPI;
 import com.jeff_media.customblockdata.CustomBlockData;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 
 import java.util.List;
 import java.util.UUID;
 
 public abstract class CustomPlaceableData extends CustomItemData {
+
+    protected PlaceableReceiver placeableReceiver;
+
+    public static void removeLink(CustomBlockData blockData)
+    {
+        //get the attached entity
+        String id = blockData.get(CustomItemManager.DisplayLinkNamespace, PersistentDataType.STRING);
+
+        //get the id
+        UUID entityId = UUID.fromString(id);
+
+        //remove the entity
+        Bukkit.getEntity(entityId).remove();
+    }
 
     public abstract NamespacedKey getDisplayModelKey();
 
@@ -34,8 +47,6 @@ public abstract class CustomPlaceableData extends CustomItemData {
 
     public abstract Sound getBreakSound();
 
-    protected PlaceableReceiver placeableReceiver;
-
     public final PlaceableReceiver getPlaceableReceiver()
     {
         if(placeableReceiver != null)
@@ -50,4 +61,10 @@ public abstract class CustomPlaceableData extends CustomItemData {
     public abstract UUID createDisplay(Location spot, double rollRot);
 
     public abstract UUID createDisplay(Location spot, BlockPlaceEvent e, Directionality directionality);
+
+    @Override
+    public String toString()
+    {
+        return getName();
+    }
 }
