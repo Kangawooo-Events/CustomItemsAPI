@@ -1,5 +1,6 @@
 package arnett.customItemsAPI;
 
+import arnett.cattamands.BranchCommand;
 import arnett.cattamands.LiteralBranchCommand;
 import arnett.customItemsAPI.CustomItems.CustomItemData;
 import arnett.customItemsAPI.CustomItems.Useable.CustomUsableData;
@@ -54,17 +55,11 @@ public class CustomItemManager {
         //register general item listener
         plugin.getServer().getPluginManager().registerEvents(generalListener, plugin);
 
-
-
         //register the give commands of the items
-        LiteralArgumentBuilder<CommandSourceStack> rootCommand
-                = new LiteralBranchCommand(plugin.getName(), List.of()).getCommand();
+        new LiteralBranchCommand("give", "op", List.of(
 
-        commands.forEach(cmd -> {
-            rootCommand.then(cmd);
-        });
+        ));
 
-        rootCommand.build();
     }
 
     public void registerEvents(CustomItemData item)

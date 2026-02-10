@@ -1,5 +1,6 @@
 package arnett.customItemsAPI.CustomItems;
 
+import arnett.cattamands.LeafCommand;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
@@ -62,7 +63,7 @@ public abstract class CustomItemData {
         return safe;
     }
 
-    public LiteralArgumentBuilder<CommandSourceStack> getGiveCommand()
+    public LeafCommand getGiveCommand()
     {
         return Commands.literal(getName()).executes(context -> {
 
