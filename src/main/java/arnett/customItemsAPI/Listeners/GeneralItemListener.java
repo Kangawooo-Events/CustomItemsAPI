@@ -32,7 +32,7 @@ public class GeneralItemListener implements Listener {
         if(!(data instanceof CustomPlaceableData placeableData))
             return;
 
-        placeableData.getPlaceableReceiver().onItemBlockPlaced(e);
+        placeableData.onItemBlockPlaced(e);
     }
 
     @EventHandler
@@ -49,7 +49,7 @@ public class GeneralItemListener implements Listener {
             return;
 
         //call its use function
-        usableData.getInteractableReceiver().onItemUsed(e);
+        usableData.onItemUsed(e);
     }
 
     @EventHandler
@@ -65,7 +65,7 @@ public class GeneralItemListener implements Listener {
             return;
 
         //call item's break function
-        placeableData.getPlaceableReceiver().onItemBlockBroken(e);
+        placeableData.onItemBlockBroken(e);
 
         //remove the display
         CustomPlaceableData.removeLink(e.getCustomBlockData());

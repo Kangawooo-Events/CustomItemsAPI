@@ -1,11 +1,12 @@
 package arnett.customItemsAPI;
 
-import arnett.cattamands.BranchCommand;
-import arnett.cattamands.LiteralBranchCommand;
+import arnett.cattamands.Cattamand;
+import arnett.cattamands.LiteralCattamand;
 import arnett.customItemsAPI.CustomItems.CustomItemData;
 import arnett.customItemsAPI.CustomItems.Useable.CustomUsableData;
 import arnett.customItemsAPI.Listeners.GeneralItemListener;
 import com.jeff_media.customblockdata.CustomBlockData;
+import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.persistence.PersistentDataContainerView;
@@ -35,7 +36,7 @@ public class CustomItemManager {
     {
         this.plugin = plugin;
 
-        ArrayList<LiteralArgumentBuilder<CommandSourceStack>> commands = new ArrayList<>();
+        ArrayList<Cattamand> giveCommands = new ArrayList<>();
 
         //fill items map
         fillItemMap(items);
@@ -46,7 +47,7 @@ public class CustomItemManager {
             registerEvents(item);
 
             //get the list of give command arguments
-            commands.add(item.getGiveCommand());
+            giveCommands.add(item.getGiveCommand());
         });
 
         //create one listener for the general events we need to listen to
@@ -56,10 +57,12 @@ public class CustomItemManager {
         plugin.getServer().getPluginManager().registerEvents(generalListener, plugin);
 
         //register the give commands of the items
-        new LiteralBranchCommand("give", "op", List.of(
-
-        ));
-
+        new LiteralCattamand.Builder("cigive")
+                .children(giveCommands)
+                .aliases(List.of("ci", "cg", "cgive"))
+                .permission("op")
+                .build()
+                .registerAsRoot(plugin);
     }
 
     public void registerEvents(CustomItemData item)

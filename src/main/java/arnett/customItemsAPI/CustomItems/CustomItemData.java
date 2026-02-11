@@ -1,6 +1,7 @@
 package arnett.customItemsAPI.CustomItems;
 
-import arnett.cattamands.LeafCommand;
+import arnett.cattamands.Cattamand;
+import arnett.cattamands.LiteralCattamand;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
@@ -63,14 +64,12 @@ public abstract class CustomItemData {
         return safe;
     }
 
-    public LeafCommand getGiveCommand()
+    public Cattamand getGiveCommand()
     {
-        return Commands.literal(getName()).executes(context -> {
-
+        return new LiteralCattamand(getName(), "op", context -> {
             //is this being sent by a player (since we need to have a player to give the item to)
             if (context.getSource().getSender() instanceof Player player)
             {
-
                 player.give(getItem());
 
                 //successful execution
@@ -82,9 +81,8 @@ public abstract class CustomItemData {
                 throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(
                         Component.text("Must be sent by a player")
                 )).create();
-
             }
-        });
+        }).setAliases(List.of("a" + getName()));
     }
 
     public List<Recipe> getRecipes() {

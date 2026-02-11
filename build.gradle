@@ -6,7 +6,7 @@ plugins {
     id 'maven-publish'
 }
 
-group = 'arnett'
+group = 'cd.arnett'
 version = '0.1'
 
 repositories {
@@ -21,7 +21,7 @@ repositories {
 dependencies {
     paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
-    implementation("arnett:cattamands:1.0")
+    implementation("cd.arnett:cattamands:1.0")
     implementation 'com.jeff-media:custom-block-data:2.2.4'
 }
 
@@ -66,7 +66,7 @@ processResources {
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            groupId = 'arnett'
+            groupId = 'cd.arnett'
             artifactId = 'customitemsapi'
             version = '0.1.0'
             from components.java
