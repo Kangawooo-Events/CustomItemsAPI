@@ -1,5 +1,6 @@
 package arnett.customItemsAPI;
 
+import arnett.customItemsAPI.Listeners.GeneralItemListener;
 import com.jeff_media.customblockdata.CustomBlockData;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -13,6 +14,9 @@ public final class CustomItemsAPI extends JavaPlugin {
     @Override
     public void onEnable() {
         // Plugin startup logic
+
+        //register the general item listener
+        getServer().getPluginManager().registerEvents(new GeneralItemListener(), this);
 
         //set singleton for easy reference to plugin
         singleton = this;

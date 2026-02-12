@@ -13,17 +13,10 @@ import org.bukkit.event.player.PlayerInteractEvent;
 
 public class GeneralItemListener implements Listener {
 
-    CustomItemManager manager;
-
-    public GeneralItemListener(CustomItemManager manager)
-    {
-        this.manager = manager;
-    }
-
     @EventHandler
     public void onPlaceBlock(BlockPlaceEvent e)
     {
-        CustomItemData data = manager.getData(e.getItemInHand());
+        CustomItemData data = CustomItemManager.getData(e.getItemInHand());
 
         //is this a custom item
         if(data == null)
@@ -38,7 +31,7 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onItemInteract(PlayerInteractEvent e)
     {
-        CustomItemData data = manager.getData(e.getItem());
+        CustomItemData data = CustomItemManager.getData(e.getItem());
 
         //is this a custom item
         if(data == null)
@@ -55,7 +48,7 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onBlockWithDataRemoved(CustomBlockDataRemoveEvent e)
     {
-        CustomItemData data = manager.getData(e.getCustomBlockData());
+        CustomItemData data = CustomItemManager.getData(e.getCustomBlockData());
 
         //is this a custom item
         if(data == null)

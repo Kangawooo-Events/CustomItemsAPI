@@ -15,6 +15,7 @@ import org.bukkit.Keyed;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.persistence.PersistentDataType;
@@ -24,18 +25,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class CustomItemManager {
+public final class CustomItemManager {
 
-    JavaPlugin plugin;
-    HashMap<NamespacedKey, CustomItemData> items = new HashMap<>();
-    GeneralItemListener generalListener;
+    static HashMap<NamespacedKey, CustomItemData> items = new HashMap<>();
 
     public static NamespacedKey DisplayLinkNamespace = new NamespacedKey("customitems", "linkeddisplay");
 
-    public CustomItemManager(JavaPlugin plugin, List<CustomItemData> items)
+    public static void registerItems(JavaPlugin plugin, List<CustomItemData> items)
     {
-        this.plugin = plugin;
-
         ArrayList<Cattamand> giveCommands = new ArrayList<>();
 
         //fill items map
@@ -43,18 +40,12 @@ public class CustomItemManager {
 
         items.forEach(( item) -> {
             //set any recipes
-            registerRecipes(item);
-            registerEvents(item);
+            registerRecipes(plugin, item);
+            registerEvents(plugin, item);
 
             //get the list of give command arguments
             giveCommands.add(item.getGiveCommand());
         });
-
-        //create one listener for the general events we need to listen to
-        generalListener = new GeneralItemListener(this);
-
-        //register general item listener
-        plugin.getServer().getPluginManager().registerEvents(generalListener, plugin);
 
         //register the give commands of the items
         new LiteralCattamand.Builder("cigive")
@@ -65,7 +56,7 @@ public class CustomItemManager {
                 .registerAsRoot(plugin);
     }
 
-    public void registerEvents(CustomItemData item)
+    static void registerEvents(JavaPlugin plugin, CustomItemData item)
     {
         item.getListeners().forEach(listener -> {
             plugin.getServer().getPluginManager().registerEvents(listener, plugin);
@@ -73,14 +64,14 @@ public class CustomItemManager {
     }
 
     //unused
-    public void unregisterEvents(CustomItemData item)
+    static void unregisterEvents(CustomItemData item)
     {
         item.getListeners().forEach(listener -> {
             HandlerList.unregisterAll(listener);
         });
     }
 
-    public void registerRecipes(CustomItemData item)
+    static void registerRecipes(JavaPlugin plugin, CustomItemData item)
     {
         for(Recipe r : item.getRecipes())
         {
@@ -98,7 +89,8 @@ public class CustomItemManager {
             }
         }
     }
-    public void unregisterRecipes(CustomItemData item)
+
+    static void unregisterRecipes(CustomItemData item)
     {
         for(NamespacedKey key : item.getRecipeKeys())
         {
@@ -107,23 +99,16 @@ public class CustomItemManager {
         }
     }
 
-    public void reloadRecipe(CustomItemData data)
-    {
-        //refresh the recipes
-        unregisterRecipes(data);
-        registerRecipes(data);
-    }
-
-    public List<String> getItemNames() {
+    public static List<String> getItemNames() {
         return items.values().stream().map(CustomItemData::getName).toList();
     }
 
-    public HashMap<NamespacedKey, CustomItemData> getItems()
+    public static HashMap<NamespacedKey, CustomItemData> getItems()
     {
         return items;
     }
 
-    public CustomItemData getItemFromName(String name) throws IllegalArgumentException {
+    public static CustomItemData getItemFromName(String name) throws IllegalArgumentException {
 
         for(CustomItemData data : items.values())
         {
@@ -135,7 +120,7 @@ public class CustomItemManager {
     }
 
 
-    public CustomItemData getItemFromNamespace(NamespacedKey key) throws IllegalArgumentException {
+    public static CustomItemData getItemFromNamespace(NamespacedKey key) throws IllegalArgumentException {
         if(items.containsKey(key))
             return items.get(key);
 
@@ -143,24 +128,21 @@ public class CustomItemManager {
     }
 
     //refresh call for when config changes have been made
-    public void refresh()
+    public static void refresh()
     {
         fillItemMap(items.values().stream().toList());
     }
 
-    //update map of items to match their keys
-    public void fillItemMap(List<CustomItemData> items)
+    static void fillItemMap(List<CustomItemData> items)
     {
-        if(items != null)
-            this.items.clear();
-
+        //add all the items to the item map
         for(CustomItemData item : items)
         {
-            this.items.put(item.getIdentifier(), item);
+            CustomItemManager.items.put(item.getIdentifier(), item);
         }
     }
 
-    public CustomItemData getData(ItemStack stack)
+    public static CustomItemData getData(ItemStack stack)
     {
         if(stack == null)
             return null;
@@ -170,7 +152,7 @@ public class CustomItemManager {
         return getData(pdc);
     }
 
-    public CustomItemData getData(PersistentDataContainerView pdc)
+    public static CustomItemData getData(PersistentDataContainerView pdc)
     {
         //is this a custom item?
         if(!pdc.has(CustomItemData.customItemTag))
@@ -190,7 +172,7 @@ public class CustomItemManager {
         return items.get(itemType);
     }
 
-    public CustomItemData getData(CustomBlockData data)
+    public static CustomItemData getData(CustomBlockData data)
     {
         //is this a custom item?
         if(!data.has(CustomItemData.customItemTag))
@@ -211,7 +193,7 @@ public class CustomItemManager {
     }
 
 
-    public CustomItemData getData(Block block)
+    public static CustomItemData getData(Block block)
     {
         if(block == null)
             return null;
