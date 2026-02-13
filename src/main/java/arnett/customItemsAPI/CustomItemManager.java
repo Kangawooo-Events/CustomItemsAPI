@@ -1,6 +1,7 @@
 package arnett.customItemsAPI;
 
 import arnett.cattamands.Cattamand;
+import arnett.cattamands.CattamandArgument;
 import arnett.cattamands.LiteralCattamand;
 import arnett.customItemsAPI.CustomItems.CustomItemData;
 import arnett.customItemsAPI.CustomItems.Useable.CustomUsableData;
@@ -9,9 +10,11 @@ import com.jeff_media.customblockdata.CustomBlockData;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import io.papermc.paper.persistence.PersistentDataContainerView;
 import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.event.HandlerList;
@@ -24,10 +27,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 public final class CustomItemManager {
 
     static HashMap<NamespacedKey, CustomItemData> items = new HashMap<>();
+    static Set<Material> customItemMaterials = Set.of();
 
     public static NamespacedKey DisplayLinkNamespace = new NamespacedKey("customitems", "linkeddisplay");
 
@@ -36,7 +41,7 @@ public final class CustomItemManager {
         ArrayList<Cattamand> giveCommands = new ArrayList<>();
 
         //fill items map
-        fillItemMap(items);
+        addItems(items);
 
         items.forEach(( item) -> {
             //set any recipes
@@ -48,9 +53,15 @@ public final class CustomItemManager {
         });
 
         //register the give commands of the items
-        new LiteralCattamand.Builder("cigive")
+        new LiteralCattamand.Builder("give")
+                .args(List.of(
+                        new CattamandArgument(
+                                "receiver",
+                                ArgumentTypes.players()
+                        )
+                ))
                 .children(giveCommands)
-                .aliases(List.of("ci", "cg", "cgive"))
+                .aliases(List.of("cig", "cg", "cgive"))
                 .permission("op")
                 .build()
                 .registerAsRoot(plugin);
@@ -127,17 +138,12 @@ public final class CustomItemManager {
         throw new IllegalArgumentException("Can't find item of name: " + key.toString());
     }
 
-    //refresh call for when config changes have been made
-    public static void refresh()
-    {
-        fillItemMap(items.values().stream().toList());
-    }
-
-    static void fillItemMap(List<CustomItemData> items)
+    static void addItems(List<CustomItemData> items)
     {
         //add all the items to the item map
         for(CustomItemData item : items)
         {
+            customItemMaterials.add(item.getBaseMaterial());
             CustomItemManager.items.put(item.getIdentifier(), item);
         }
     }
@@ -145,6 +151,10 @@ public final class CustomItemManager {
     public static CustomItemData getData(ItemStack stack)
     {
         if(stack == null)
+            return null;
+
+        //quick generic check before more expensive pdc
+        if(!customItemMaterials.contains(stack.getType()))
             return null;
 
         PersistentDataContainerView pdc = stack.getPersistentDataContainer();
@@ -196,6 +206,10 @@ public final class CustomItemManager {
     public static CustomItemData getData(Block block)
     {
         if(block == null)
+            return null;
+
+        //quick check before more expensive pdc
+        if(!customItemMaterials.contains(block.getType()))
             return null;
 
         if(!CustomBlockData.hasCustomBlockData(block, CustomItemsAPI.singleton))

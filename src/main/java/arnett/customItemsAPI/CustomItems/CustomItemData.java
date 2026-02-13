@@ -1,6 +1,7 @@
 package arnett.customItemsAPI.CustomItems;
 
 import arnett.cattamands.Cattamand;
+import arnett.cattamands.CattamandHelper;
 import arnett.cattamands.LiteralCattamand;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -8,6 +9,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.command.brigadier.MessageComponentSerializer;
+import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -67,22 +69,16 @@ public abstract class CustomItemData {
     public Cattamand getGiveCommand()
     {
         return new LiteralCattamand(getName(), "op", context -> {
-            //is this being sent by a player (since we need to have a player to give the item to)
-            if (context.getSource().getSender() instanceof Player player)
-            {
-                player.give(getItem());
 
-                //successful execution
-                return Command.SINGLE_SUCCESS;
-            }
-            else
-            {
-                //throw the error to player
-                throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(
-                        Component.text("Must be sent by a player")
-                )).create();
-            }
-        }).setAliases(List.of("a" + getName()));
+            //get the player(s) to give to
+            CattamandHelper.getPlayersFromArgs("receiver", context).forEach(player -> {
+                player.give(getItem());
+            });
+
+            //successful execution
+            return Command.SINGLE_SUCCESS;
+
+        }).setAliases(List.of(getIdentifier().toString()));
     }
 
     public List<Recipe> getRecipes() {

@@ -9,6 +9,7 @@ import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 
@@ -56,7 +57,18 @@ public abstract class CustomPlaceableData extends CustomItemData {
         return getName();
     }
 
-    public abstract void onItemBlockPlaced(BlockPlaceEvent e);
+    public void onItemBlockPlaced(BlockPlaceEvent e)
+    {
+        return;
+    }
 
-    public abstract void onItemBlockBroken(CustomBlockDataRemoveEvent e);
+    public void onBlockInteraction(PlayerInteractEvent e)
+    {
+        return;
+    }
+
+    public void onItemBlockBroken(CustomBlockDataRemoveEvent e)
+    {
+        return;
+    }
 }

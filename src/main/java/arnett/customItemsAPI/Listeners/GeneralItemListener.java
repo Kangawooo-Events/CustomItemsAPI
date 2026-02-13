@@ -29,20 +29,41 @@ public class GeneralItemListener implements Listener {
     }
 
     @EventHandler
-    public void onItemInteract(PlayerInteractEvent e)
+    public void onInteract(PlayerInteractEvent e)
     {
-        CustomItemData data = CustomItemManager.getData(e.getItem());
+        //item used
+        {
+            //check the item used
+            CustomItemData data = CustomItemManager.getData(e.getItem());
 
-        //is this a custom item
-        if(data == null)
-            return;
+            //is this a custom item
+            if(data == null)
+                return;
 
-        //is this a usable item
-        if(!(data instanceof CustomUsableData usableData))
-            return;
+            //is this a usable item
+            if(!(data instanceof CustomUsableData usableData))
+                return;
 
-        //call its use function
-        usableData.onItemUsed(e);
+            //call its use function
+            usableData.onItemUsed(e);
+        }
+
+        //block clicked
+        {
+            CustomItemData data = CustomItemManager.getData(e.getClickedBlock());
+
+            //is this a custom item
+            if(data == null)
+                return;
+
+            //get placeable data
+            if(!(data instanceof CustomPlaceableData placeableData))
+                return;
+
+            //call item's break function
+            placeableData.onBlockInteraction(e);
+
+        }
     }
 
     @EventHandler
