@@ -8,6 +8,7 @@ import arnett.customItemsAPI.CustomItems.Useable.CustomUsableData;
 import arnett.customItemsAPI.Listeners.GeneralItemListener;
 import com.jeff_media.customblockdata.CustomBlockData;
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
@@ -24,15 +25,12 @@ import org.bukkit.inventory.Recipe;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public final class CustomItemManager {
 
     static HashMap<NamespacedKey, CustomItemData> items = new HashMap<>();
-    static Set<Material> customItemMaterials = Set.of();
+    static HashSet<Material> customItemMaterials = new HashSet<Material>();
 
     public static NamespacedKey DisplayLinkNamespace = new NamespacedKey("customitems", "linkeddisplay");
 
@@ -53,7 +51,7 @@ public final class CustomItemManager {
         });
 
         //register the give commands of the items
-        new LiteralCattamand.Builder("give")
+        new LiteralCattamand.Builder("cigive")
                 .args(List.of(
                         new CattamandArgument(
                                 "receiver",

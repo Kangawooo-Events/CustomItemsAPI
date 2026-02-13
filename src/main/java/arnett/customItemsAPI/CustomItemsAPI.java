@@ -2,6 +2,10 @@ package arnett.customItemsAPI;
 
 import arnett.customItemsAPI.Listeners.GeneralItemListener;
 import com.jeff_media.customblockdata.CustomBlockData;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.plugin.lifecycle.event.LifecycleEvent;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.logging.Logger;
