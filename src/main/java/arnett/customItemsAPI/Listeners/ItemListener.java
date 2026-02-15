@@ -1,13 +1,13 @@
 package arnett.customItemsAPI.Listeners;
 
-import arnett.customItemsAPI.CustomItems.CustomItemData;
+import arnett.customItemsAPI.CustomItems.CustomItemLibrary;
 import org.bukkit.event.Listener;
 
 public abstract class ItemListener implements Listener {
 
-    CustomItemData data;
+    CustomItemLibrary data;
 
-    public ItemListener(CustomItemData data)
+    public ItemListener(CustomItemLibrary data)
     {
         this.data = data;
     }

@@ -3,14 +3,8 @@ package arnett.customItemsAPI;
 import arnett.cattamands.Cattamand;
 import arnett.cattamands.CattamandArgument;
 import arnett.cattamands.LiteralCattamand;
-import arnett.customItemsAPI.CustomItems.CustomItemData;
-import arnett.customItemsAPI.CustomItems.Useable.CustomUsableData;
-import arnett.customItemsAPI.Listeners.GeneralItemListener;
+import arnett.customItemsAPI.CustomItems.CustomItemLibrary;
 import com.jeff_media.customblockdata.CustomBlockData;
-import com.mojang.brigadier.Command;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import io.papermc.paper.persistence.PersistentDataContainerView;
 import org.bukkit.Bukkit;
@@ -19,7 +13,6 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.event.HandlerList;
-import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.persistence.PersistentDataType;
@@ -29,12 +22,12 @@ import java.util.*;
 
 public final class CustomItemManager {
 
-    static HashMap<NamespacedKey, CustomItemData> items = new HashMap<>();
+    static HashMap<NamespacedKey, CustomItemLibrary> items = new HashMap<>();
     static HashSet<Material> customItemMaterials = new HashSet<Material>();
 
     public static NamespacedKey DisplayLinkNamespace = new NamespacedKey("customitems", "linkeddisplay");
 
-    public static void registerItems(JavaPlugin plugin, List<CustomItemData> items)
+    public static void registerItems(JavaPlugin plugin, List<CustomItemLibrary> items)
     {
         ArrayList<Cattamand> giveCommands = new ArrayList<>();
 
@@ -65,7 +58,7 @@ public final class CustomItemManager {
                 .registerAsRoot(plugin);
     }
 
-    static void registerEvents(JavaPlugin plugin, CustomItemData item)
+    static void registerEvents(JavaPlugin plugin, CustomItemLibrary item)
     {
         item.getListeners().forEach(listener -> {
             plugin.getServer().getPluginManager().registerEvents(listener, plugin);
@@ -73,14 +66,14 @@ public final class CustomItemManager {
     }
 
     //unused
-    static void unregisterEvents(CustomItemData item)
+    static void unregisterEvents(CustomItemLibrary item)
     {
         item.getListeners().forEach(listener -> {
             HandlerList.unregisterAll(listener);
         });
     }
 
-    static void registerRecipes(JavaPlugin plugin, CustomItemData item)
+    static void registerRecipes(JavaPlugin plugin, CustomItemLibrary item)
     {
         for(Recipe r : item.getRecipes())
         {
@@ -99,7 +92,7 @@ public final class CustomItemManager {
         }
     }
 
-    static void unregisterRecipes(CustomItemData item)
+    static void unregisterRecipes(CustomItemLibrary item)
     {
         for(NamespacedKey key : item.getRecipeKeys())
         {
@@ -109,17 +102,17 @@ public final class CustomItemManager {
     }
 
     public static List<String> getItemNames() {
-        return items.values().stream().map(CustomItemData::getName).toList();
+        return items.values().stream().map(CustomItemLibrary::getName).toList();
     }
 
-    public static HashMap<NamespacedKey, CustomItemData> getItems()
+    public static HashMap<NamespacedKey, CustomItemLibrary> getItems()
     {
         return items;
     }
 
-    public static CustomItemData getItemFromName(String name) throws IllegalArgumentException {
+    public static CustomItemLibrary getItemFromName(String name) throws IllegalArgumentException {
 
-        for(CustomItemData data : items.values())
+        for(CustomItemLibrary data : items.values())
         {
             if(data.getName().equals(name))
                 return data;
@@ -128,25 +121,38 @@ public final class CustomItemManager {
         throw new IllegalArgumentException("Can't find item of name: " + name.toString());
     }
 
+    public static <T extends CustomItemLibrary> T getFromClass(Class<T> lib)
+    {
+        try
+        {
+            var instance = lib.getDeclaredConstructor().newInstance();
+            return (T)items.get(instance.getIdentifier());
+        }
+        catch (Exception e)
+        {
+            CustomItemsAPI.logger.warning("Unable to Find Library for Class: " + lib.getName());
+            return null;
+        }
+    }
 
-    public static CustomItemData getItemFromNamespace(NamespacedKey key) throws IllegalArgumentException {
+    public static CustomItemLibrary getItemFromNamespace(NamespacedKey key) throws IllegalArgumentException {
         if(items.containsKey(key))
             return items.get(key);
 
         throw new IllegalArgumentException("Can't find item of name: " + key.toString());
     }
 
-    static void addItems(List<CustomItemData> items)
+    static void addItems(List<CustomItemLibrary> items)
     {
         //add all the items to the item map
-        for(CustomItemData item : items)
+        for(CustomItemLibrary item : items)
         {
             customItemMaterials.add(item.getBaseMaterial());
             CustomItemManager.items.put(item.getIdentifier(), item);
         }
     }
 
-    public static CustomItemData getData(ItemStack stack)
+    public static CustomItemLibrary getLibrary(ItemStack stack)
     {
         if(stack == null)
             return null;
@@ -157,16 +163,16 @@ public final class CustomItemManager {
 
         PersistentDataContainerView pdc = stack.getPersistentDataContainer();
 
-        return getData(pdc);
+        return getLibrary(pdc);
     }
 
-    public static CustomItemData getData(PersistentDataContainerView pdc)
+    public static CustomItemLibrary getLibrary(PersistentDataContainerView pdc)
     {
         //is this a custom item?
-        if(!pdc.has(CustomItemData.customItemTag))
+        if(!pdc.has(CustomItemLibrary.customItemTag))
             return null;
 
-        NamespacedKey itemType = NamespacedKey.fromString(pdc.get(CustomItemData.customItemTag, PersistentDataType.STRING));
+        NamespacedKey itemType = NamespacedKey.fromString(pdc.get(CustomItemLibrary.customItemTag, PersistentDataType.STRING));
 
         //was it a namespace (did someone screw up storing this correctly check)
         if(itemType == null)
@@ -180,13 +186,13 @@ public final class CustomItemManager {
         return items.get(itemType);
     }
 
-    public static CustomItemData getData(CustomBlockData data)
+    public static CustomItemLibrary getLibrary(CustomBlockData data)
     {
         //is this a custom item?
-        if(!data.has(CustomItemData.customItemTag))
+        if(!data.has(CustomItemLibrary.customItemTag))
             return null;
 
-        NamespacedKey itemType = NamespacedKey.fromString(data.get(CustomItemData.customItemTag, PersistentDataType.STRING));
+        NamespacedKey itemType = NamespacedKey.fromString(data.get(CustomItemLibrary.customItemTag, PersistentDataType.STRING));
 
         //was it a namespace (did someone screw up storing this correctly check)
         if(itemType == null)
@@ -201,7 +207,7 @@ public final class CustomItemManager {
     }
 
 
-    public static CustomItemData getData(Block block)
+    public static CustomItemLibrary getLibrary(Block block)
     {
         if(block == null)
             return null;
@@ -213,6 +219,6 @@ public final class CustomItemManager {
         if(!CustomBlockData.hasCustomBlockData(block, CustomItemsAPI.singleton))
             return null;
 
-        return getData(new CustomBlockData(block, CustomItemsAPI.singleton));
+        return getLibrary(new CustomBlockData(block, CustomItemsAPI.singleton));
     }
 }

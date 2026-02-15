@@ -4,26 +4,20 @@ import arnett.cattamands.Cattamand;
 import arnett.cattamands.CattamandHelper;
 import arnett.cattamands.LiteralCattamand;
 import com.mojang.brigadier.Command;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
-import io.papermc.paper.command.brigadier.MessageComponentSerializer;
-import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public abstract class CustomItemData {
+public abstract class CustomItemLibrary {
 
     protected JavaPlugin plugin;
 
@@ -100,5 +94,37 @@ public abstract class CustomItemData {
             return false;
 
         return stack.getPersistentDataContainer().has(getIdentifier());
+    }
+
+    public int findInInventory(Inventory inventory)
+    {
+        int firstSlot = inventory.first(getBaseMaterial());
+
+        //not in this inventory
+        if(firstSlot == -1)
+            return -1;
+
+        //base material is here so now check if it has the identifier
+        if(isItem(inventory.getItem(firstSlot)))
+            return firstSlot;
+
+        //not the custom item (just shares the base material)
+        return -1;
+    }
+
+    public List<Integer> findAllInInventory(Inventory inventory)
+    {
+        ArrayList<Integer> containingSlots = new ArrayList<>();
+
+        for(int i = 0; i < inventory.getSize(); i++)
+        {
+            if(inventory.getItem(i) == null || inventory.getItem(i).getType() != getBaseMaterial())
+                continue;
+            if(isItem(inventory.getItem(i)))
+                containingSlots.add(i);
+
+        }
+
+        return containingSlots;
     }
 }

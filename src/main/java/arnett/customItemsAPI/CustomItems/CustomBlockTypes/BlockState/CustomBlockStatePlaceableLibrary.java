@@ -1,9 +1,8 @@
 package arnett.customItemsAPI.CustomItems.CustomBlockTypes.BlockState;
 
 import arnett.customItemsAPI.CustomItemManager;
-import arnett.customItemsAPI.CustomItems.CustomBlockType;
-import arnett.customItemsAPI.CustomItems.CustomBlockTypes.CustomPlaceableData;
-import arnett.customItemsAPI.CustomItems.CustomItemData;
+import arnett.customItemsAPI.CustomItems.CustomBlockTypes.CustomPlaceableLibrary;
+import arnett.customItemsAPI.CustomItems.CustomItemLibrary;
 import arnett.customItemsAPI.CustomItems.Directionality;
 import arnett.customItemsAPI.CustomItemsAPI;
 import com.jeff_media.customblockdata.CustomBlockData;
@@ -15,7 +14,6 @@ import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -26,7 +24,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.UUID;
 
-public abstract class CustomBlockStatePlaceableData extends CustomPlaceableData {
+public abstract class CustomBlockStatePlaceableLibrary extends CustomPlaceableLibrary {
 
     protected abstract BlockData getOverrideBlockData();
 
@@ -187,7 +185,7 @@ public abstract class CustomBlockStatePlaceableData extends CustomPlaceableData 
         PersistentDataContainer customBlockData = new CustomBlockData(e.getBlock(), CustomItemsAPI.singleton);
 
         //set the generic tag to tell it is a custom block
-        customBlockData.set(CustomItemData.customItemTag, PersistentDataType.STRING, getIdentifier().toString());
+        customBlockData.set(CustomItemLibrary.customItemTag, PersistentDataType.STRING, getIdentifier().toString());
 
         //set this as the item (boolean and true don't really matter here we just check that it has this later)
         customBlockData.set(getIdentifier(), PersistentDataType.BOOLEAN, true);
@@ -227,4 +225,5 @@ public abstract class CustomBlockStatePlaceableData extends CustomPlaceableData 
         );
 
     }
+
 }
