@@ -7,6 +7,8 @@ import com.mojang.brigadier.Command;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
@@ -15,6 +17,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public abstract class CustomItemLibrary {
@@ -89,6 +92,9 @@ public abstract class CustomItemLibrary {
 
     public boolean isItem(ItemStack stack)
     {
+        if(stack == null)
+            return false;
+
         //start with general material check
         if(!stack.getType().equals(getBaseMaterial()))
             return false;
@@ -98,15 +104,18 @@ public abstract class CustomItemLibrary {
 
     public int findInInventory(Inventory inventory)
     {
-        int firstSlot = inventory.first(getBaseMaterial());
+        var itemSlots = inventory.all(getBaseMaterial());
 
         //not in this inventory
-        if(firstSlot == -1)
+        if(itemSlots.isEmpty())
             return -1;
 
-        //base material is here so now check if it has the identifier
-        if(isItem(inventory.getItem(firstSlot)))
-            return firstSlot;
+        for(int slot : itemSlots.keySet())
+        {
+            //base material is here so now check if it has the identifier
+            if(isItem(inventory.getItem(slot)))
+                return slot;
+        }
 
         //not the custom item (just shares the base material)
         return -1;
@@ -126,5 +135,15 @@ public abstract class CustomItemLibrary {
         }
 
         return containingSlots;
+    }
+
+    public void onItemUsed(PlayerInteractEvent e)
+    {
+        return;
+    }
+
+    public void onItemUsedOnEntity(PlayerInteractEntityEvent e)
+    {
+        return;
     }
 }

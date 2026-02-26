@@ -16,6 +16,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -173,6 +174,8 @@ public abstract class CustomBlockStatePlaceableLibrary extends CustomPlaceableLi
     @Override
     public void onItemBlockPlaced(BlockPlaceEvent e)
     {
+        if(e.isCancelled())
+            return;
 
         //the item was placed
         //replace the actual block with the kind we want
@@ -199,8 +202,11 @@ public abstract class CustomBlockStatePlaceableLibrary extends CustomPlaceableLi
     }
 
     @Override
-    public void onItemBlockBroken(CustomBlockDataRemoveEvent e)
+    public void onItemBlockBroken(BlockBreakEvent e)
     {
+        if(e.isCancelled())
+            return;
+
         //the item was Broken
         Location offsetLocation = e.getBlock().getLocation().clone().add(getDisplayModelOffset());
 
@@ -224,6 +230,7 @@ public abstract class CustomBlockStatePlaceableLibrary extends CustomPlaceableLi
                 1f
         );
 
+        super.onItemBlockBroken(e);
     }
 
 }

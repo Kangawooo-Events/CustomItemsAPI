@@ -3,14 +3,20 @@ package arnett.customItemsAPI.CustomItems.CustomBlockTypes;
 import arnett.customItemsAPI.CustomItemManager;
 import arnett.customItemsAPI.CustomItems.CustomItemLibrary;
 import arnett.customItemsAPI.CustomItems.Directionality;
+import arnett.customItemsAPI.CustomItemsAPI;
 import com.jeff_media.customblockdata.CustomBlockData;
 import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.persistence.PersistentDataType;
@@ -21,18 +27,6 @@ import java.util.List;
 import java.util.UUID;
 
 public abstract class CustomPlaceableLibrary extends CustomItemLibrary {
-
-    public static void removeLink(CustomBlockData blockData)
-    {
-        //get the attached entity
-        String id = blockData.get(CustomItemManager.DisplayLinkNamespace, PersistentDataType.STRING);
-
-        //get the id
-        UUID entityId = UUID.fromString(id);
-
-        //remove the entity
-        Bukkit.getEntity(entityId).remove();
-    }
 
     public abstract NamespacedKey getDisplayModelKey();
 
@@ -55,6 +49,74 @@ public abstract class CustomPlaceableLibrary extends CustomItemLibrary {
 
     public abstract UUID createDisplay(Location spot, BlockPlaceEvent e, Directionality directionality);
 
+    /**
+     *
+     * @param spot Where to place the block
+     * @param template Itemstack required to create place event and used in overriding for blocks that need more data from the place item
+     * @param placer who to get credit for placing the block, required to fire BlockPlaceEvent
+     *               Places the block against the block down from it
+     */
+    public void placeBlock(Location spot, ItemStack template, Player placer)
+    {
+        //this is used to place a block somewhere in the world through code
+        //the template is only there for usage with blocks that need custom data from an itemstack
+        //but for default this just places the block
+
+        Block placeAtBlock = spot.getBlock();
+        BlockState previousState = placeAtBlock.getState();
+        Block placedAgainst = placeAtBlock.getRelative(BlockFace.DOWN);
+
+        BlockPlaceEvent placeEvent = new BlockPlaceEvent(
+                placeAtBlock,
+                previousState,
+                placedAgainst,
+                template,
+                placer,
+                true,
+                EquipmentSlot.HAND
+        );
+
+        //call the place event
+        //this does the plugin code stuff
+        Bukkit.getPluginManager().callEvent(placeEvent);
+
+        //if the event was NOT canceled
+        if(!placeEvent.isCancelled())
+        {
+            //set the block type
+            placeAtBlock.setType(getBaseMaterial());
+        }
+    }
+
+    public void deleteBlock(Block block)
+    {
+        CustomBlockData cbd = new CustomBlockData(block, CustomItemsAPI.singleton);
+        removeLink(cbd);
+        cbd.clear();
+        block.setType(Material.AIR);
+    }
+
+    public static void removeLink(CustomBlockData blockData)
+    {
+        //get the attached entity
+        String id = blockData.get(CustomItemManager.DisplayLinkNamespace, PersistentDataType.STRING);
+
+        //get the id
+        UUID entityId = UUID.fromString(id);
+
+        //remove the entity
+        Bukkit.getEntity(entityId).remove();
+    }
+
+    public static void removeLink(Block block)
+    {
+        if(!CustomBlockData.hasCustomBlockData(block, CustomItemsAPI.singleton))
+            return;
+
+        //get the attached entity
+        removeLink(new CustomBlockData(block, CustomItemsAPI.singleton));
+    }
+
     @Override
     public String toString()
     {
@@ -71,13 +133,20 @@ public abstract class CustomPlaceableLibrary extends CustomItemLibrary {
         return;
     }
 
-    public void onItemBlockBroken(CustomBlockDataRemoveEvent e)
+    public void onItemBlockBroken(BlockBreakEvent e)
     {
-        return;
+        if(e.isCancelled())
+            return;
+
+        //remove the display
+        CustomPlaceableLibrary.removeLink(e.getBlock());
     }
 
     public void onCopy(PlayerPickItemEvent e, Entity targetEntity, Block targetBlock)
     {
+        if(e.isCancelled())
+            return;
+
         //cancel the event since we have to override it ourselves
         e.setCancelled(true);
 
