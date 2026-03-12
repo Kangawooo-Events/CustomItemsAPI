@@ -7,11 +7,14 @@ import arnett.customItemsAPI.CustomItemsAPI;
 import com.jeff_media.customblockdata.CustomBlockData;
 import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -19,6 +22,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
@@ -45,9 +49,125 @@ public abstract class CustomPlaceableLibrary extends CustomItemLibrary {
 
     public abstract Sound getBreakSound();
 
-    public abstract UUID createDisplay(Location spot, double rollRot);
+    public UUID createDisplay(Location spot, double rollRot)
+    {
+        //create the display entity at the offset
+        ItemDisplay display = spot.getWorld().spawn(spot.clone().add(getDisplayModelOffset()), ItemDisplay.class, (e) -> {
+            //set an item to display
+            ItemStack toDisplay = new ItemStack(Material.STICK);
 
-    public abstract UUID createDisplay(Location spot, BlockPlaceEvent e, Directionality directionality);
+            ItemMeta meta = toDisplay.getItemMeta();
+
+            meta.displayName(Component.text(getName(), NamedTextColor.GOLD));
+
+            //change it to the safe
+            meta.setItemModel(getDisplayModelKey());
+
+            toDisplay.setItemMeta(meta);
+
+            //set the display
+            e.setItemStack(toDisplay);
+
+        });
+
+        System.out.println(display == null);
+        System.out.println(display.getUniqueId());
+
+        displayEntityID = display.getUniqueId();
+
+        return displayEntityID;
+    }
+
+    public UUID createDisplay(Location spot, BlockPlaceEvent e, Directionality directionality)
+    {
+        //set the rotation according to player direction
+        Location rotatedSpot = spot.clone();
+
+        BlockFace face = e.getBlockPlaced().getFace(e.getBlockAgainst());
+        boolean againstWall = !(face == BlockFace.DOWN || face == BlockFace.UP || face == BlockFace.SELF);
+
+        //used to track the item display's roll (used like if it needs to be flipped)
+        double zRot = 0f;
+
+        switch (directionality){
+            case Directionality.NESW ->
+            {
+                switch (face)
+                {
+                    //base it off wall placement
+                    case NORTH -> rotatedSpot.setYaw(0f);
+                    case EAST -> rotatedSpot.setYaw(90f);
+                    case SOUTH -> rotatedSpot.setYaw(180f);
+                    case WEST -> rotatedSpot.setYaw(270f);
+
+                    //placed on floor or roof
+                    //base it off player direction
+                    default -> {
+                        switch (e.getPlayer().getFacing())
+                        {
+                            case NORTH -> rotatedSpot.setYaw(0f);
+                            case EAST -> rotatedSpot.setYaw(90f);
+                            case SOUTH -> rotatedSpot.setYaw(180f);
+                            case WEST -> rotatedSpot.setYaw(270f);
+                        }
+                    }
+                }
+            }
+            case Directionality.UD ->
+            {
+                switch (face)
+                {
+                    case UP -> zRot = 180f;
+                    case DOWN -> zRot = 0f;
+
+                    //placed on a wall so base of placed direction
+                    default -> {
+                        //if the player is looking up flip it
+                        if(e.getPlayer().getFacing() == BlockFace.UP)
+                        {
+                            zRot = 180;
+                        }
+                    }
+                }
+            }
+            case Directionality.NESWUD ->
+            {
+                //if the player is looking up flip it
+                if(e.getPlayer().getFacing() == BlockFace.UP)
+                {
+                    zRot = 180;
+                }
+
+                switch (face)
+                {
+                    //base it off wall placement
+                    case NORTH -> rotatedSpot.setYaw(0f);
+                    case EAST -> rotatedSpot.setYaw(90f);
+                    case SOUTH -> rotatedSpot.setYaw(180f);
+                    case WEST -> rotatedSpot.setYaw(270f);
+
+                    //placed on floor or roof
+                    //base it off player direction
+                    case DOWN, UP -> {
+                        switch (e.getPlayer().getFacing())
+                        {
+                            case NORTH -> rotatedSpot.setYaw(0f);
+                            case EAST -> rotatedSpot.setYaw(90f);
+                            case SOUTH -> rotatedSpot.setYaw(180f);
+                            case WEST -> rotatedSpot.setYaw(270f);
+                        }
+
+                        if(face == BlockFace.UP)
+                            zRot = 180f;
+                    }
+                }
+            }
+        }
+
+        return createDisplay(rotatedSpot, zRot);
+    }
+
+    protected UUID displayEntityID;
 
     /**
      *
@@ -195,5 +315,15 @@ public abstract class CustomPlaceableLibrary extends CustomItemLibrary {
         }
 
         e.getPlayer().getInventory().setItemInMainHand(getItem());
+    }
+
+    public ItemDisplay getDisplayEntity()
+    {
+        return (ItemDisplay) Bukkit.getEntity(displayEntityID);
+    }
+
+    public UUID getDisplayEntityID()
+    {
+        return displayEntityID;
     }
 }
