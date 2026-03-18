@@ -1,9 +1,9 @@
 package arnett.customItemsAPI;
 
-import arnett.cattamands.Cattamand;
-import arnett.cattamands.CattamandArgument;
-import arnett.cattamands.LiteralCattamand;
 import arnett.customItemsAPI.CustomItems.CustomItemLibrary;
+import cd.arnett.cattamands.arguments.Cattarameter;
+import cd.arnett.cattamands.cattamand.Cattamand;
+import cd.arnett.cattamands.cattamand.LiteralCattamand;
 import com.jeff_media.customblockdata.CustomBlockData;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import io.papermc.paper.persistence.PersistentDataContainerView;
@@ -45,8 +45,8 @@ public final class CustomItemManager {
 
         //register the give commands of the items
         new LiteralCattamand.Builder("cigive")
-                .args(List.of(
-                        new CattamandArgument(
+                .argument(List.of(
+                        new Cattarameter(
                                 "receiver",
                                 ArgumentTypes.players()
                         )

@@ -16,12 +16,19 @@ repositories {
         name = "papermc-repo"
         url = "https://repo.papermc.io/repository/maven-public/"
     }
+    maven {
+        url = uri("https://maven.pkg.github.com/kangawooo-events/cattamands")
+        credentials {
+            username = project.findProperty("github.user") as String ?: System.getenv("github.user")
+            password = project.findProperty("github.token") as String ?: System.getenv("github.token")
+        }
+    }
 }
 
 dependencies {
     paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
-    implementation("cd.arnett:cattamands:1.0")
+    implementation("cd.arnett:cattamands:0.P.2")
     implementation 'com.jeff-media:custom-block-data:2.2.4'
 }
 

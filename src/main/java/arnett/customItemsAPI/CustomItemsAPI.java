@@ -1,8 +1,8 @@
 package arnett.customItemsAPI;
 
-import arnett.cattamands.CattamandArgument;
-import arnett.cattamands.LiteralCattamand;
 import arnett.customItemsAPI.Listeners.GeneralItemListener;
+import cd.arnett.cattamands.arguments.Cattarameter;
+import cd.arnett.cattamands.cattamand.LiteralCattamand;
 import com.jeff_media.customblockdata.CustomBlockData;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -36,18 +36,6 @@ public final class CustomItemsAPI extends JavaPlugin {
 
         //set logger for easy logging
         logger = getLogger();
-
-        new LiteralCattamand("test1", "op", (Command<CommandSourceStack>)e->{
-                e.getSource().getSender().sendMessage("asdaswe");
-                return 1;
-            }
-        ).registerAsRoot(this);
-
-        new LiteralCattamand("test2",List.of(new CattamandArgument("argument", StringArgumentType.word(), "suggestion")) , (Command<CommandSourceStack>) e->{
-            e.getSource().getSender().sendMessage("w1qwedaqws");
-            return 1;
-        }
-        ).setAliases(List.of("t")).registerAsRoot(this);
     }
 
     @Override

@@ -1,8 +1,8 @@
 package arnett.customItemsAPI.CustomItems;
 
-import arnett.cattamands.Cattamand;
-import arnett.cattamands.CattamandHelper;
-import arnett.cattamands.LiteralCattamand;
+import cd.arnett.cattamands.arguments.ArgumentHelper;
+import cd.arnett.cattamands.cattamand.Cattamand;
+import cd.arnett.cattamands.cattamand.LiteralCattamand;
 import com.mojang.brigadier.Command;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -68,7 +68,7 @@ public abstract class CustomItemLibrary {
         return new LiteralCattamand(getName(), "op", context -> {
 
             //get the player(s) to give to
-            CattamandHelper.getPlayersFromArgs("receiver", context).forEach(player -> {
+            ArgumentHelper.getPlayersFromArgs("receiver", context).forEach(player -> {
                 player.give(getItem());
             });
 
