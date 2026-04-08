@@ -1,6 +1,6 @@
 package arnett.customItemsAPI;
 
-import arnett.customItemsAPI.CustomItems.CustomItemLibrary;
+import arnett.customItemsAPI.CustomItems.ItemLibrary;
 import cd.arnett.cattamands.arguments.Cattarameter;
 import cd.arnett.cattamands.cattamand.Cattamand;
 import cd.arnett.cattamands.cattamand.LiteralCattamand;
@@ -12,22 +12,24 @@ import org.bukkit.Keyed;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Interaction;
 import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-public final class CustomItemManager {
+public final class ItemManager {
 
-    static HashMap<NamespacedKey, CustomItemLibrary> items = new HashMap<>();
-    static HashSet<Material> customItemMaterials = new HashSet<Material>();
+    static HashMap<NamespacedKey, ItemLibrary> items = new HashMap<>();
+    static HashSet<Material> customItemMaterials = new HashSet<>();
 
     public static NamespacedKey DisplayLinkNamespace = new NamespacedKey("customitems", "linkeddisplay");
 
-    public static void registerItems(JavaPlugin plugin, List<CustomItemLibrary> items)
+    public static void registerItems(JavaPlugin plugin, List<ItemLibrary> items)
     {
         ArrayList<Cattamand> giveCommands = new ArrayList<>();
 
@@ -46,7 +48,7 @@ public final class CustomItemManager {
         //register the give commands of the items
         new LiteralCattamand.Builder("cigive")
                 .argument(List.of(
-                        new Cattarameter(
+                        Cattarameter.of(
                                 "receiver",
                                 ArgumentTypes.players()
                         )
@@ -58,7 +60,7 @@ public final class CustomItemManager {
                 .registerAsRoot(plugin);
     }
 
-    static void registerEvents(JavaPlugin plugin, CustomItemLibrary item)
+    static void registerEvents(JavaPlugin plugin, ItemLibrary item)
     {
         item.getListeners().forEach(listener -> {
             plugin.getServer().getPluginManager().registerEvents(listener, plugin);
@@ -66,14 +68,14 @@ public final class CustomItemManager {
     }
 
     //unused
-    static void unregisterEvents(CustomItemLibrary item)
+    static void unregisterEvents(ItemLibrary item)
     {
         item.getListeners().forEach(listener -> {
             HandlerList.unregisterAll(listener);
         });
     }
 
-    static void registerRecipes(JavaPlugin plugin, CustomItemLibrary item)
+    static void registerRecipes(JavaPlugin plugin, ItemLibrary item)
     {
         for(Recipe r : item.getRecipes())
         {
@@ -92,7 +94,7 @@ public final class CustomItemManager {
         }
     }
 
-    static void unregisterRecipes(CustomItemLibrary item)
+    static void unregisterRecipes(ItemLibrary item)
     {
         for(NamespacedKey key : item.getRecipeKeys())
         {
@@ -102,17 +104,17 @@ public final class CustomItemManager {
     }
 
     public static List<String> getItemNames() {
-        return items.values().stream().map(CustomItemLibrary::getName).toList();
+        return items.values().stream().map(ItemLibrary::getName).toList();
     }
 
-    public static HashMap<NamespacedKey, CustomItemLibrary> getItems()
+    public static HashMap<NamespacedKey, ItemLibrary> getItems()
     {
         return items;
     }
 
-    public static CustomItemLibrary getItemFromName(String name) throws IllegalArgumentException {
+    public static ItemLibrary getItemFromName(String name) throws IllegalArgumentException {
 
-        for(CustomItemLibrary data : items.values())
+        for(ItemLibrary data : items.values())
         {
             if(data.getName().equals(name))
                 return data;
@@ -121,7 +123,7 @@ public final class CustomItemManager {
         throw new IllegalArgumentException("Can't find item of name: " + name.toString());
     }
 
-    public static <T extends CustomItemLibrary> T getFromClass(Class<T> lib)
+    public static <T extends ItemLibrary> T getFromClass(Class<T> lib)
     {
         try
         {
@@ -135,24 +137,24 @@ public final class CustomItemManager {
         }
     }
 
-    public static CustomItemLibrary getItemFromNamespace(NamespacedKey key) throws IllegalArgumentException {
+    public static ItemLibrary getItemFromNamespace(NamespacedKey key) throws IllegalArgumentException {
         if(items.containsKey(key))
             return items.get(key);
 
         throw new IllegalArgumentException("Can't find item of name: " + key.toString());
     }
 
-    static void addItems(List<CustomItemLibrary> items)
+    static void addItems(List<ItemLibrary> items)
     {
         //add all the items to the item map
-        for(CustomItemLibrary item : items)
+        for(ItemLibrary item : items)
         {
             customItemMaterials.add(item.getBaseMaterial());
-            CustomItemManager.items.put(item.getIdentifier(), item);
+            ItemManager.items.put(item.getIdentifier(), item);
         }
     }
 
-    public static CustomItemLibrary getLibrary(ItemStack stack)
+    public static ItemLibrary getLibrary(ItemStack stack)
     {
         if(stack == null)
             return null;
@@ -166,13 +168,13 @@ public final class CustomItemManager {
         return getLibrary(pdc);
     }
 
-    public static CustomItemLibrary getLibrary(PersistentDataContainerView pdc)
+    public static ItemLibrary getLibrary(PersistentDataContainerView pdc)
     {
         //is this a custom item?
-        if(!pdc.has(CustomItemLibrary.customItemTag))
+        if(!pdc.has(ItemLibrary.customItemTag))
             return null;
 
-        NamespacedKey itemType = NamespacedKey.fromString(pdc.get(CustomItemLibrary.customItemTag, PersistentDataType.STRING));
+        NamespacedKey itemType = NamespacedKey.fromString(pdc.get(ItemLibrary.customItemTag, PersistentDataType.STRING));
 
         //was it a namespace (did someone screw up storing this correctly check)
         if(itemType == null)
@@ -186,13 +188,13 @@ public final class CustomItemManager {
         return items.get(itemType);
     }
 
-    public static CustomItemLibrary getLibrary(CustomBlockData data)
+    public static ItemLibrary getLibrary(CustomBlockData data)
     {
         //is this a custom item?
-        if(!data.has(CustomItemLibrary.customItemTag))
+        if(!data.has(ItemLibrary.customItemTag))
             return null;
 
-        NamespacedKey itemType = NamespacedKey.fromString(data.get(CustomItemLibrary.customItemTag, PersistentDataType.STRING));
+        NamespacedKey itemType = NamespacedKey.fromString(data.get(ItemLibrary.customItemTag, PersistentDataType.STRING));
 
         //was it a namespace (did someone screw up storing this correctly check)
         if(itemType == null)
@@ -207,13 +209,39 @@ public final class CustomItemManager {
     }
 
 
-    public static CustomItemLibrary getLibrary(Block block)
+    public static ItemLibrary getLibrary(Interaction interaction)
+    {
+        //is this a custom item?
+        if(!interaction.getPersistentDataContainer().has(ItemLibrary.customItemTag))
+            return null;
+
+        String ciTag = interaction.getPersistentDataContainer().get(ItemLibrary.customItemTag, PersistentDataType.STRING);
+
+        if(ciTag == null)
+            return null;
+
+        NamespacedKey itemType = NamespacedKey.fromString(ciTag);
+
+        //was it a namespace (did someone screw up storing this correctly check)
+        if(itemType == null)
+            return null;
+
+        //is this one in the manager?
+        if(!items.containsKey(itemType))
+            return null;
+
+        //it is an item in this manager
+        return items.get(itemType);
+    }
+
+
+    public static ItemLibrary getLibrary(Block block)
     {
         if(block == null)
             return null;
 
         //quick check before more expensive pdc
-        if(!customItemMaterials.contains(block.getType()))
+        if(!customItemMaterials.contains(block.getType()) && block.getType() != Material.AIR)
             return null;
 
         if(!CustomBlockData.hasCustomBlockData(block, CustomItemsAPI.singleton))

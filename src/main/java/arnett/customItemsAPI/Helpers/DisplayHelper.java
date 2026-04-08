@@ -45,6 +45,7 @@ public class DisplayHelper {
         else
             flags &= ~0x40;
 
+
         //data values which will be sent to the player
         List<SynchedEntityData.DataValue<?>> glowingData = List.of(SynchedEntityData.DataValue.create(entityFlagAccessor, flags));
 

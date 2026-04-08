@@ -4,6 +4,9 @@ import cd.arnett.cattamands.arguments.ArgumentHelper;
 import cd.arnett.cattamands.cattamand.Cattamand;
 import cd.arnett.cattamands.cattamand.LiteralCattamand;
 import com.mojang.brigadier.Command;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.Listener;
@@ -17,10 +20,9 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
-public abstract class CustomItemLibrary {
+public abstract class ItemLibrary {
 
     protected JavaPlugin plugin;
 
@@ -44,12 +46,17 @@ public abstract class CustomItemLibrary {
 
     public abstract String getName();
 
+    public String getDisplayName()
+    {
+        return getName();
+    }
+
     public ItemStack getItem() {
         //create item stack of config set material
-        ItemStack safe = ItemStack.of(getBaseMaterial());
+        ItemStack item = ItemStack.of(getBaseMaterial());
 
         //change the item model
-        ItemMeta meta = safe.getItemMeta();
+        ItemMeta meta = item.getItemMeta();
 
         meta.setItemModel(getItemModelKey());
 
@@ -58,9 +65,11 @@ public abstract class CustomItemLibrary {
         //tag it as a custom item with a namespace which can be easily accessed later to get the specific item type
         meta.getPersistentDataContainer().set(customItemTag, PersistentDataType.STRING, getIdentifier().toString());
 
-        safe.setItemMeta(meta);
+        meta.itemName(MiniMessage.miniMessage().deserialize(getDisplayName()));
 
-        return safe;
+        item.setItemMeta(meta);
+
+        return item;
     }
 
     public Cattamand getGiveCommand()
@@ -146,4 +155,5 @@ public abstract class CustomItemLibrary {
     {
         return;
     }
+
 }

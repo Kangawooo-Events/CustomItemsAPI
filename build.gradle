@@ -28,7 +28,7 @@ repositories {
 dependencies {
     paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
-    implementation("cd.arnett:cattamands:0.P.2")
+    implementation("cd.arnett:cattamands:1.A.2")
     implementation 'com.jeff-media:custom-block-data:2.2.4'
 }
 
@@ -75,7 +75,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'cd.arnett'
             artifactId = 'customitemsapi'
-            version = '0.1.0'
+            version = '0.1.6'
             from components.java
         }
     }
