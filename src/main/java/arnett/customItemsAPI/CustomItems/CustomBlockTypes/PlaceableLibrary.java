@@ -162,11 +162,13 @@ public abstract class PlaceableLibrary extends ItemLibrary {
             {
                 rotation = PlacementHelper.placeNESW(player, against);
                 rotation.mul(new Quaternionf().rotateX(-(float)Math.PI/2));
+                rotation.mul(PlacementHelper.placeWallDirectional(player, against));
             }
 
             case WallD -> {
                 rotation = PlacementHelper.placeNESW(player, against);
                 rotation.mul(PlacementHelper.placeWallD(against));
+                rotation.mul(PlacementHelper.placeWallDirectional(player, against));
             }
 
             case WallUD -> {
@@ -184,6 +186,7 @@ public abstract class PlaceableLibrary extends ItemLibrary {
                 against = data.getRight();
 
                 rotation.mul(new Quaternionf().rotateX(-(float)Math.PI/2));
+                rotation.mul(PlacementHelper.placeWallDirectional(player, against));
             }
 
             case WallDBlock -> {
@@ -206,6 +209,7 @@ public abstract class PlaceableLibrary extends ItemLibrary {
                 }
 
                 rotation.mul(PlacementHelper.placeWallUD(player, against));
+                rotation.mul(PlacementHelper.placeWallDirectional(player, against));
             }
 
             case WallUDBlock -> {
@@ -228,6 +232,7 @@ public abstract class PlaceableLibrary extends ItemLibrary {
                 }
 
                 rotation.mul(PlacementHelper.placeWallUD(player, against));
+                rotation.mul(PlacementHelper.placeWallDirectional(player, against));
             }
         }
 

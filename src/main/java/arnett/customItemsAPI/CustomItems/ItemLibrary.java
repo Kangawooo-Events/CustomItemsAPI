@@ -1,9 +1,11 @@
 package arnett.customItemsAPI.CustomItems;
 
 import cd.arnett.cattamands.arguments.ArgumentHelper;
+import cd.arnett.cattamands.arguments.Cattarameter;
 import cd.arnett.cattamands.cattamand.Cattamand;
 import cd.arnett.cattamands.cattamand.LiteralCattamand;
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -33,11 +35,6 @@ public abstract class ItemLibrary {
     public abstract NamespacedKey getItemModelKey();
 
     public List<Listener> getListeners()
-    {
-        return List.of();
-    }
-
-    public List<String> giveCommandArguments()
     {
         return List.of();
     }
@@ -74,17 +71,19 @@ public abstract class ItemLibrary {
 
     public Cattamand getGiveCommand()
     {
-        return new LiteralCattamand(getName(), "op", context -> {
+        return new LiteralCattamand(
+                getName(),
+                "op",
+                context -> {
+                    //get the player(s) to give to
+                    ArgumentHelper.getPlayersFromArgs("receiver", context).forEach(player -> {
+                        player.give(getItem());
+                    });
 
-            //get the player(s) to give to
-            ArgumentHelper.getPlayersFromArgs("receiver", context).forEach(player -> {
-                player.give(getItem());
-            });
-
-            //successful execution
-            return Command.SINGLE_SUCCESS;
-
-        }).setAliases(List.of(getIdentifier().toString()));
+                    //successful execution
+                    return Command.SINGLE_SUCCESS;
+                }
+        ).setAliases(List.of(getIdentifier().toString()));
     }
 
     public List<Recipe> getRecipes() {

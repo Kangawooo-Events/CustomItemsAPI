@@ -29,9 +29,9 @@ public class PlacementHelper {
             default -> switch (player.getFacing())
             {
                 //opposite here since the player is facing opposite to the face they're placing on
-                case NORTH -> new Quaternionf().rotateY((float)Math.PI);
-                case EAST -> new Quaternionf().rotateY((float)Math.PI/2);
-                case WEST -> new Quaternionf().rotateY(-(float)Math.PI/2);
+                case SOUTH -> new Quaternionf().rotateY((float)Math.PI);
+                case WEST -> new Quaternionf().rotateY((float)Math.PI/2);
+                case EAST -> new Quaternionf().rotateY(-(float)Math.PI/2);
                 default -> new Quaternionf().rotateY(0);
             };
         };
@@ -46,12 +46,14 @@ public class PlacementHelper {
     static Quaternionf placeUD(Player player, BlockFace against)
     {
         return switch (against) {
-            case UP -> new Quaternionf();
-            case DOWN -> new Quaternionf().rotateZ((float)Math.PI);
+            case UP -> new Quaternionf().rotateZ((float)Math.PI);
+            case DOWN -> new Quaternionf();
 
             //placed on a wall so base of placed direction
-            default -> player.getFacing() == BlockFace.UP ?
-                    new Quaternionf().rotateZ((float)Math.PI) :
+            default -> player.getPitch() > 15 ?
+                    //looking up
+                    new Quaternionf().rotateY((float)Math.PI) :
+                    //looking down
                     new Quaternionf();
         };
     }
@@ -184,7 +186,7 @@ public class PlacementHelper {
                 Quaternionf rotation = new Quaternionf();
 
                 //if the player is looking up, flip the model at this point
-                if(player.getFacing().equals(BlockFace.UP))
+                if(player.getPitch() > 15)
                 {
                     rotation.rotateY((float)Math.PI);
                 }
@@ -202,5 +204,17 @@ public class PlacementHelper {
             case DOWN -> new Quaternionf();
             default  -> new Quaternionf().rotateX(-(float)Math.PI/2);
         };
+    }
+
+    static Quaternionf placeWallDirectional(Player player, BlockFace against)
+    {
+        if(BlockFace.UP == against || against == BlockFace.DOWN)
+            return new Quaternionf();
+
+        return player.getPitch() > 15 ?
+                //looking up
+                new Quaternionf().rotateX((float)Math.PI) :
+                //looking down
+                new Quaternionf();
     }
 }
