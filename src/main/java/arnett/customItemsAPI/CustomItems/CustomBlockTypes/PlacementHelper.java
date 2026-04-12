@@ -2,7 +2,13 @@ package arnett.customItemsAPI.CustomItems.CustomBlockTypes;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.Container;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.*;
+import org.bukkit.craftbukkit.block.impl.CraftSweetBerryBush;
 import org.bukkit.entity.Player;
 import org.joml.Quaternionf;
 
@@ -50,7 +56,7 @@ public class PlacementHelper {
             case DOWN -> new Quaternionf();
 
             //placed on a wall so base of placed direction
-            default -> player.getPitch() > 15 ?
+            default -> player.getPitch() > -15 ?
                     //looking up
                     new Quaternionf().rotateY((float)Math.PI) :
                     //looking down
@@ -186,7 +192,7 @@ public class PlacementHelper {
                 Quaternionf rotation = new Quaternionf();
 
                 //if the player is looking up, flip the model at this point
-                if(player.getPitch() > 15)
+                if(player.getPitch() > -15)
                 {
                     rotation.rotateY((float)Math.PI);
                 }
@@ -211,10 +217,49 @@ public class PlacementHelper {
         if(BlockFace.UP == against || against == BlockFace.DOWN)
             return new Quaternionf();
 
-        return player.getPitch() > 15 ?
+        return player.getPitch() > -15 ?
                 //looking up
                 new Quaternionf().rotateX((float)Math.PI) :
                 //looking down
                 new Quaternionf();
     }
+
+    public static boolean isUsable(Block block)
+    {
+        BlockData blockData = block.getBlockData();
+        Material type = block.getType();
+        return  block != null && (
+                blockData instanceof Switch ||
+                blockData instanceof Shelf ||
+                blockData instanceof Container ||
+                blockData instanceof Gate ||
+                blockData instanceof Door ||
+                blockData instanceof TrapDoor ||
+                blockData instanceof CommandBlock ||
+                blockData instanceof Sign ||
+                blockData instanceof WallHangingSign ||
+                blockData instanceof CopperGolemStatue ||
+                blockData instanceof StructureBlock ||
+                        (blockData instanceof Jukebox box && !box.hasRecord()) ||
+                        type == Material.CRAFTER ||
+                        type == Material.CRAFTING_TABLE ||
+                        type == Material.ANVIL ||
+                        type == Material.BEACON ||
+                        type == Material.LECTERN ||
+                        type == Material.TRAPPED_CHEST ||
+                        type == Material.ENCHANTING_TABLE ||
+                        type == Material.CAKE ||
+                        type == Material.NOTE_BLOCK ||
+                        type == Material.SWEET_BERRY_BUSH ||
+                        type == Material.GLOW_BERRIES ||
+                        type == Material.DRAGON_EGG ||
+                        type == Material.DECORATED_POT ||
+                        type == Material.DAYLIGHT_DETECTOR ||
+                        type == Material.REPEATER ||
+                        type == Material.COMPARATOR
+
+                );
+    }
+
+
 }

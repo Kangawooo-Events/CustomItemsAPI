@@ -6,6 +6,7 @@ import cd.arnett.cattamands.cattamand.Cattamand;
 import cd.arnett.cattamands.cattamand.LiteralCattamand;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -69,15 +70,34 @@ public abstract class ItemLibrary {
         return item;
     }
 
+    public ItemStack getItem(int count)
+    {
+        ItemStack stack = getItem();
+        stack.setAmount(count);
+        return stack;
+    }
+
     public Cattamand getGiveCommand()
     {
         return new LiteralCattamand(
                 getName(),
                 "op",
+                List.of(
+                        Cattarameter.of(
+                                "count",
+                                IntegerArgumentType.integer(
+                                        0,
+                                        getBaseMaterial().getMaxStackSize()
+                                )
+                        )
+                ),
                 context -> {
+
+                    int count = context.getArgument("count", int.class);
+
                     //get the player(s) to give to
                     ArgumentHelper.getPlayersFromArgs("receiver", context).forEach(player -> {
-                        player.give(getItem());
+                        player.give(getItem(count));
                     });
 
                     //successful execution

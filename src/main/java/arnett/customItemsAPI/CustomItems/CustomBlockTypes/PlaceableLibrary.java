@@ -2,6 +2,8 @@ package arnett.customItemsAPI.CustomItems.CustomBlockTypes;
 
 import arnett.customItemsAPI.CustomItems.ItemLibrary;
 import arnett.customItemsAPI.CustomItems.Directionality;
+import arnett.customItemsAPI.CustomItemsAPI;
+import com.jeff_media.customblockdata.CustomBlockData;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -9,16 +11,16 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.ItemDisplay;
-import org.bukkit.entity.Player;
+import org.bukkit.block.PistonMoveReaction;
+import org.bukkit.entity.*;
+import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
@@ -30,8 +32,10 @@ import java.util.UUID;
 public abstract class PlaceableLibrary extends ItemLibrary {
 
     public static NamespacedKey explosiveRangeNamespace = new NamespacedKey("customitems", "explosiverange");
+    public static NamespacedKey placementDirectionNamespace = new NamespacedKey("customitems", "placementdirection");
 
     public abstract NamespacedKey getDisplayModelKey();
+    public abstract PistonMoveReaction getPistonPushable();
 
     public NamespacedKey getWallDisplayModelKey()
     {
@@ -369,5 +373,23 @@ public abstract class PlaceableLibrary extends ItemLibrary {
     public void onPlaceableDropItem(Item baseMaterialItem)
     {
         baseMaterialItem.setItemStack(getItem());
+    }
+
+    public void onBlockPhysicsUpdate(BlockPhysicsEvent e)
+    {
+        return;
+    }
+
+    public abstract void naturalBlockBreak(Block block, boolean dropItem);
+
+    public BlockFace getPlacementDirection(Block block)
+    {
+        Integer face = new CustomBlockData(block, CustomItemsAPI.singleton)
+                .get(placementDirectionNamespace, PersistentDataType.INTEGER);
+
+        if(face == null)
+            return BlockFace.DOWN;
+
+        return BlockFace.values()[face];
     }
 }

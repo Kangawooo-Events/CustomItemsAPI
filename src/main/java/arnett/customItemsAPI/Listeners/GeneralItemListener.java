@@ -1,19 +1,25 @@
 package arnett.customItemsAPI.Listeners;
 
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.Interactable.InteractorLibrary;
+import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlacementHelper;
+import arnett.customItemsAPI.CustomItemsAPI;
 import arnett.customItemsAPI.ItemManager;
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.BlockState.BlockStateLibrary;
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlaceableLibrary;
 import arnett.customItemsAPI.CustomItems.ItemLibrary;
+import com.jeff_media.customblockdata.CustomBlockData;
+import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.PistonMoveReaction;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -22,6 +28,7 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -40,11 +47,15 @@ public class GeneralItemListener implements Listener {
         if(e.isCancelled())
             return;
 
-        ItemLibrary data = ItemManager.getLibrary(e.getItemInHand());
-
         //check if this is taken by a custom block
-        if(ItemManager.getLibrary(e.getBlock()) != null)
+        //do a thorough check here because we can't do the quick exit if it is not a listed material type
+        if(ItemManager.getLibraryThorough(e.getBlock()) != null)
+        {
+            e.setCancelled(true);
             return;
+        }
+
+        ItemLibrary data = ItemManager.getLibrary(e.getItemInHand());
 
         //is this a custom item
         if(data == null)
@@ -116,8 +127,10 @@ public class GeneralItemListener implements Listener {
         //call its use function
         data.onItemUsed(e);
 
-        //is this something which should be placed?
-        if(e.getClickedBlock() == null)
+        Block clicked = e.getClickedBlock();
+
+        //is this something that can be placed on?
+        if(clicked == null)
             return;
 
         //if the block's interact function doesn't prevent placing then continue
@@ -125,6 +138,11 @@ public class GeneralItemListener implements Listener {
             return;
 
         ItemLibrary handItemLib = ItemManager.getLibrary(e.getItem());
+
+        if(!e.getPlayer().isSneaking() && PlacementHelper.isUsable(e.getClickedBlock()))
+        {
+            return;
+        }
 
         //possibly they are trying to place an interactable item since this doesn't need to be a placeable block state
         if(handItemLib instanceof InteractorLibrary interactorData)
@@ -167,6 +185,20 @@ public class GeneralItemListener implements Listener {
             //call item's copy function
             placeableData.onCopy(e, results.getHitEntity(), results.getHitBlock());
         }
+    }
+
+    @EventHandler
+    public void onPhsyicisEvent(BlockPhysicsEvent e)
+    {
+        ItemLibrary data = ItemManager.getLibrary(e.getBlock());
+
+        //handles 99% of cases without a custom block in O(1)
+        if(data == null)
+            return;
+
+        if(data instanceof PlaceableLibrary placeable)
+            placeable.onBlockPhysicsUpdate(e);
+
     }
 
 
@@ -369,31 +401,37 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onPistonPush(BlockPistonExtendEvent e)
     {
-        Block tip;
-
         //get last pushed block
         if(e.getBlocks().isEmpty())
         {
-            tip = e.getBlock().getRelative(e.getDirection());
+            Block tip = e.getBlock().getRelative(e.getDirection());
+            //check the tip block if it is pushing into an interactor then break it
+            if(ItemManager.getLibrary(tip) instanceof InteractorLibrary library)
+            {
+                library.naturalBlockBreak(tip, true);
+            }
         }
         else {
-            tip = e.getBlocks().getLast().getRelative(e.getDirection());
-
             //check the blocks being pushed if they are a custom block
-            //unrelated to the tip
             if(e.getBlocks().stream().anyMatch(block -> {
-                ItemLibrary lib = ItemManager.getLibrary(block);
+
+                //check the next block
+                Block into = block.getRelative(e.getDirection());
+
+                System.out.println(into.getLocation());
+
+                ItemLibrary lib = ItemManager.getLibrary(into);
 
                 if(lib == null)
                     return false;
 
-                if(!(lib instanceof BlockStateLibrary blockLib))
+                if(!(lib instanceof PlaceableLibrary blockLib))
                     return false;
 
                 return switch (blockLib.getPistonPushable())
                 {
                     case BREAK -> {
-                        blockLib.naturalBlockBreak(block, true);
+                        blockLib.naturalBlockBreak(into, true);
                         yield false;
                     }
                     case BLOCK, MOVE -> true;
@@ -406,11 +444,6 @@ public class GeneralItemListener implements Listener {
             }
         }
 
-        //check the tip block if it is pushing into an interactor then break it
-        if(ItemManager.getLibrary(tip) instanceof InteractorLibrary library)
-        {
-            library.naturalBlockBreak(tip, true);
-        }
     }
 
     @EventHandler
@@ -422,6 +455,27 @@ public class GeneralItemListener implements Listener {
             {
                 e.setCancelled(true);
             }
+        }
+    }
+
+    @EventHandler
+    public void onBlockForm(BlockFormEvent e)
+    {
+        //get library
+        ItemLibrary lib = ItemManager.getLibraryThorough(e.getBlock());
+
+        if(lib instanceof InteractorLibrary interactor)
+        {
+            interactor.naturalBlockBreak(e.getBlock(), true);
+        }
+    }
+
+    @EventHandler
+    public void onDataRemove(CustomBlockDataRemoveEvent e) {
+        ItemLibrary lib = ItemManager.getLibrary(e.getBlock());
+        if(lib instanceof InteractorLibrary)
+        {
+            ((InteractorLibrary) lib).naturalBlockBreak(e.getBlock(), true);
         }
     }
 }

@@ -1,5 +1,6 @@
 package arnett.customItemsAPI.CustomItems.CustomBlockTypes.BlockState;
 
+import arnett.customItemsAPI.CustomItems.Directionality;
 import arnett.customItemsAPI.ItemManager;
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlaceableLibrary;
 import arnett.customItemsAPI.CustomItems.ItemLibrary;
@@ -14,6 +15,7 @@ import org.bukkit.entity.Item;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -28,7 +30,6 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
     protected abstract BlockData getOverrideBlockData();
 
     public abstract boolean getExplosionResistant();
-    public abstract PistonMoveReaction getPistonPushable();
 
     public boolean isItem(Block block)
     {
@@ -67,7 +68,12 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
         //set this as the item (boolean and true don't really matter here we just check that it has this later)
         customBlockData.set(getIdentifier(), PersistentDataType.BOOLEAN, true);
 
-        UUID id = createDisplay(placeSpot, e);
+        var placementInfo = getDisplaySpot(placeSpot, e);
+
+        //set the placement direction
+        customBlockData.set(placementDirectionNamespace, PersistentDataType.INTEGER, placementInfo.faceOn().ordinal());
+
+        UUID id = createDisplay(placementInfo);
 
         if(id == null)
         {
@@ -164,6 +170,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
      * Naturally removes the custom block and drops it's items
      * @param brokenBlock the custom block being broken
      */
+    @Override
     public void naturalBlockBreak(Block brokenBlock, boolean dropItem)
     {
         if(isItem(brokenBlock))
@@ -204,7 +211,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
         //drop the item of the base material and call on BlockDrop item for consistency
         //because this is what it would normally look like if the player broke a block
         breakBlock.getWorld().dropItemNaturally(
-                breakBlock.getLocation(),
+                breakBlock.getLocation().add(.5f, .5f, .5f),
                 new ItemStack(getBaseMaterial()),
                 item -> onPlaceableDropItem(breakBlock, item)
         );
@@ -248,5 +255,27 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
 
         //get the attached entity
         removeLink(new CustomBlockData(block, CustomItemsAPI.singleton));
+    }
+
+    @Override
+    public void onBlockPhysicsUpdate(BlockPhysicsEvent e) {
+
+        switch (getDirectionality())
+        {
+            case WallBlock, WallUDBlock, WallDBlock: break;
+            default : return;
+        }
+
+        if(e.getBlock().getType() != Material.AIR)
+            naturalBlockBreak(e.getBlock(), true);
+        if(getPlacementDirection(e.getBlock()).getOppositeFace() == e.getBlock().getFace(e.getSourceBlock()))
+        {
+            //attached block broken
+            if(!e.getSourceBlock().isBuildable())
+            {
+                //block is no longer solid so break this
+                naturalBlockBreak(e.getBlock(), true);
+            }
+        }
     }
 }

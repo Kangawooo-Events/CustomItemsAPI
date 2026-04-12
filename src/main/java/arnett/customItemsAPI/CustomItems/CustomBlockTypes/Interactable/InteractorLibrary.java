@@ -13,6 +13,7 @@ import org.bukkit.block.PistonMoveReaction;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -38,7 +39,6 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
     public abstract float getWidth();
 
     public abstract boolean isExplosionResistant();
-    public abstract PistonMoveReaction getPistonPushable();
 
     public Vector getHitboxWallOffset()
     {
@@ -185,6 +185,12 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
                 interaction.getUniqueId().toString()
         );
 
+        customBlockData.set(
+                placementDirectionNamespace,
+                PersistentDataType.INTEGER,
+                displayInfo.faceOn().ordinal()
+        );
+
         //don't have the player actually place a block here or interact with it since we are placing a block now
         e.setUseItemInHand(Event.Result.DENY);
         e.setUseInteractedBlock(Event.Result.DENY);
@@ -275,11 +281,14 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
      */
     public void naturalBlockBreak(Interaction blockInteraction, boolean dropItem)
     {
+        if(blockInteraction == null)
+            return;
+
         if(isItem(blockInteraction))
             //first delete the block
             delete(blockInteraction);
 
-        Location offsetLocation = blockInteraction.getLocation().clone().add(getDisplayModelOffset());
+        Location offsetLocation = blockInteraction.getLocation().clone().add(0, .5, 0);
 
         //show particles
         offsetLocation.getWorld().spawnParticle(
@@ -310,12 +319,14 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
      * Naturally removes the custom block and drops it's items
      * @param interactionBlock the custom block being broken
      */
+    @Override
     public void naturalBlockBreak(Block interactionBlock, boolean dropItem)
     {
         naturalBlockBreak(getInteraction(interactionBlock), dropItem);
     }
 
     private void dropPlaceableItem(Interaction breakInteraction) {
+        System.out.println("moving");
         //drop the item of the base material and call on BlockDrop item for consistency
         //because this is what it would normally look like if the player broke a block
         breakInteraction.getWorld().dropItemNaturally(
@@ -361,8 +372,7 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
 
     public static Interaction getInteraction(Block block)
     {
-        //interactors only have air
-        if(block.getType() != Material.AIR)
+        if(block.getType().isSolid())
             return null;
 
         if(!CustomBlockData.hasCustomBlockData(block, CustomItemsAPI.singleton))
@@ -380,5 +390,24 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
             return null;
 
         return interaction;
+    }
+
+    @Override
+    public void onBlockPhysicsUpdate(BlockPhysicsEvent e) {
+        switch (getDirectionality())
+        {
+            case WallBlock, WallUDBlock, WallDBlock: break;
+            default : return;
+        }
+
+        if(getPlacementDirection(e.getBlock()).getOppositeFace() == e.getBlock().getFace(e.getSourceBlock()))
+        {
+            //attached block broken
+            if(!e.getSourceBlock().isBuildable())
+            {
+                //block is no longer solid so break this
+                naturalBlockBreak(getInteraction(e.getBlock()), true);
+            }
+        }
     }
 }

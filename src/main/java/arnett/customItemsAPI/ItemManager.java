@@ -241,7 +241,19 @@ public final class ItemManager {
             return null;
 
         //quick check before more expensive pdc
-        if(!customItemMaterials.contains(block.getType()) && block.getType() != Material.AIR)
+        if(!customItemMaterials.contains(block.getType()) && block.isSolid())
+            return null;
+
+        if(!CustomBlockData.hasCustomBlockData(block, CustomItemsAPI.singleton))
+            return null;
+
+        return getLibrary(new CustomBlockData(block, CustomItemsAPI.singleton));
+    }
+
+
+    public static ItemLibrary getLibraryThorough(Block block)
+    {
+        if(block == null)
             return null;
 
         if(!CustomBlockData.hasCustomBlockData(block, CustomItemsAPI.singleton))
