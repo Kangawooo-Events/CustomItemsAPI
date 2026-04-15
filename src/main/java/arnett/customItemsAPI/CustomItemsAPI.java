@@ -20,10 +20,14 @@ public final class CustomItemsAPI extends JavaPlugin {
 
     public static Logger logger;
     public static JavaPlugin singleton;
+    public static boolean worldGuardEnabled;
 
     @Override
     public void onEnable() {
         // Plugin startup logic
+        if (getServer().getPluginManager().getPlugin("WorldGuard") != null) {
+            worldGuardEnabled = true;
+        }
 
         //register the general item listener
         getServer().getPluginManager().registerEvents(new GeneralItemListener(), this);

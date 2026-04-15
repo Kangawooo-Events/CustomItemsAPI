@@ -175,4 +175,8 @@ public abstract class ItemLibrary {
         return;
     }
 
+    public boolean keepBaseCrafts()
+    {
+        return false;
+    }
 }

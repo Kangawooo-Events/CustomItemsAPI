@@ -2,38 +2,36 @@ package arnett.customItemsAPI.Listeners;
 
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.Interactable.InteractorLibrary;
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlacementHelper;
-import arnett.customItemsAPI.CustomItemsAPI;
+import arnett.customItemsAPI.Helpers.WorldGuardHelper;
 import arnett.customItemsAPI.ItemManager;
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.BlockState.BlockStateLibrary;
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlaceableLibrary;
 import arnett.customItemsAPI.CustomItems.ItemLibrary;
-import com.jeff_media.customblockdata.CustomBlockData;
 import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
+import com.sk89q.worldguard.protection.flags.Flags;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
-import org.bukkit.block.PistonMoveReaction;
-import org.bukkit.block.data.BlockData;
+import org.bukkit.block.Crafter;
+import org.bukkit.craftbukkit.event.CraftEventFactory;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
-import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.CraftItemEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Collection;
-import java.util.List;
 
 public class GeneralItemListener implements Listener {
 
@@ -74,9 +72,12 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onInteract(PlayerInteractEvent e)
     {
+
         if(e.useInteractedBlock() != Event.Result.DENY)
+        {
             //block clicked
             blockInteractCheck(e);
+        }
 
         if(e.useItemInHand() != Event.Result.DENY)
             //item used
@@ -86,6 +87,9 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onInteractEntity(PlayerInteractEntityEvent e)
     {
+        if(e.isCancelled())
+            return;
+
         //get item used
         ItemStack used = e.getPlayer().getInventory().getItem(e.getHand());
 
@@ -95,17 +99,32 @@ public class GeneralItemListener implements Listener {
         if(data == null)
             return;
 
+        if(!WorldGuardHelper.canWorldGuardFlag(e.getPlayer(), e.getRightClicked().getLocation(), Flags.INTERACT))
+        {
+            e.setCancelled(true);
+            return;
+        }
+
         //call its use function
         data.onItemUsedOnEntity(e);
     }
 
     void blockInteractCheck(PlayerInteractEvent e)
     {
+        if(e.getClickedBlock() == null)
+            return;
+
         ItemLibrary data = ItemManager.getLibrary(e.getClickedBlock());
 
         //is this a custom item
         if(data == null)
             return;
+
+        if(!WorldGuardHelper.canWorldGuardFlag(e.getPlayer(), e.getClickedBlock().getLocation(), Flags.INTERACT))
+        {
+            e.setCancelled(true);
+            return;
+        }
 
         //they are interacting with a placeable block
         if(data instanceof BlockStateLibrary blockStateData)
@@ -127,6 +146,7 @@ public class GeneralItemListener implements Listener {
         //call its use function
         data.onItemUsed(e);
 
+
         Block clicked = e.getClickedBlock();
 
         //is this something that can be placed on?
@@ -137,15 +157,21 @@ public class GeneralItemListener implements Listener {
         if(e.useItemInHand() == Event.Result.DENY || e.getAction().isLeftClick())
             return;
 
-        ItemLibrary handItemLib = ItemManager.getLibrary(e.getItem());
 
         if(!e.getPlayer().isSneaking() && PlacementHelper.isUsable(e.getClickedBlock()))
         {
             return;
         }
 
+        //maybe they are trying to place it
+        if(!WorldGuardHelper.canWorldGuardFlag(e.getPlayer(), e.getInteractionPoint(), Flags.BUILD))
+        {
+            e.setCancelled(true);
+            return;
+        }
+
         //possibly they are trying to place an interactable item since this doesn't need to be a placeable block state
-        if(handItemLib instanceof InteractorLibrary interactorData)
+        if(data instanceof InteractorLibrary interactorData)
         {
             //call item's place function
             interactorData.onItemPlacementInteraction(e);
@@ -190,6 +216,9 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onPhsyicisEvent(BlockPhysicsEvent e)
     {
+        if(e.isCancelled())
+            return;
+
         ItemLibrary data = ItemManager.getLibrary(e.getBlock());
 
         //handles 99% of cases without a custom block in O(1)
@@ -228,6 +257,9 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onEntityExplode(EntityExplodeEvent e)
     {
+        if(e.isCancelled())
+            return;
+
         // check the surrounding blocks
         e.blockList().removeIf(block ->{
             //check if it is a custom block
@@ -301,6 +333,9 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onBlockExplode(BlockExplodeEvent e)
     {
+        if(e.isCancelled())
+            return;
+
         // check the surrounding blocks
         e.blockList().removeIf(block ->{
             //check if it is a custom block
@@ -357,6 +392,9 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void entityDamageEntity(EntityDamageByEntityEvent e)
     {
+        if(e.isCancelled())
+            return;
+
         //if it is not damaged by one of there destruction events don't do anything
         if(!(e.getDamager() instanceof Player ||
                 e.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
@@ -383,6 +421,9 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e)
     {
+        if(e.isCancelled())
+            return;
+
         if(!(e.getRightClicked() instanceof Interaction interaction))
             return;
 
@@ -390,6 +431,12 @@ public class GeneralItemListener implements Listener {
 
         if(!(lib instanceof InteractorLibrary interactorLibrary))
         {
+            return;
+        }
+
+        if(!WorldGuardHelper.canWorldGuardFlag(e.getPlayer(), e.getRightClicked().getLocation(), Flags.INTERACT))
+        {
+            e.setCancelled(true);
             return;
         }
 
@@ -405,11 +452,24 @@ public class GeneralItemListener implements Listener {
         if(e.getBlocks().isEmpty())
         {
             Block tip = e.getBlock().getRelative(e.getDirection());
-            //check the tip block if it is pushing into an interactor then break it
-            if(ItemManager.getLibrary(tip) instanceof InteractorLibrary library)
+
+            ItemLibrary lib = ItemManager.getLibrary(tip);
+
+            if(lib == null)
+                return;
+
+            if(!(lib instanceof PlaceableLibrary blockLib))
+                return;
+
+            e.setCancelled(switch (blockLib.getPistonPushable())
             {
-                library.naturalBlockBreak(tip, true);
-            }
+                case BREAK -> {
+                    blockLib.naturalBlockBreak(tip, true);
+                    yield false;
+                }
+                case BLOCK, MOVE -> true;
+                default -> true;
+            });
         }
         else {
             //check the blocks being pushed if they are a custom block
@@ -440,7 +500,6 @@ public class GeneralItemListener implements Listener {
             }))
             {
                 e.setCancelled(true);
-                return;
             }
         }
 
@@ -477,5 +536,55 @@ public class GeneralItemListener implements Listener {
         {
             ((InteractorLibrary) lib).naturalBlockBreak(e.getBlock(), true);
         }
+    }
+
+    @EventHandler
+    public void onItemCraftPrepare(PrepareItemCraftEvent e)
+    {
+        if(hasNonBaseCraftable(e.getInventory().getContents()))
+        {
+            e.getInventory().setResult(null);
+        }
+    }
+
+    @EventHandler
+    public void onCrafterCraft(CrafterCraftEvent e)
+    {
+        if(!(e.getBlock() instanceof Crafter crafter))
+        {
+            return;
+        }
+
+        if(hasNonBaseCraftable(crafter.getInventory().getContents()))
+        {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onCraftTable(CraftItemEvent e)
+    {
+        if(hasNonBaseCraftable(e.getInventory().getContents()))
+        {
+            e.setCancelled(true);
+        }
+    }
+
+    boolean hasNonBaseCraftable(ItemStack[] recipeContents)
+    {
+        for(ItemStack stack : recipeContents)
+        {
+
+            ItemLibrary lib = ItemManager.getLibrary(stack);
+
+            if(lib != null)
+            {
+                System.out.println(lib.keepBaseCrafts());
+                //remove the result
+                return !lib.keepBaseCrafts();
+            }
+        }
+
+        return false;
     }
 }

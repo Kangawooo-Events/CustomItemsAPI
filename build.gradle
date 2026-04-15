@@ -23,6 +23,7 @@ repositories {
             password = project.findProperty("github.token") as String ?: System.getenv("github.token")
         }
     }
+    maven { url "https://maven.enginehub.org/repo/" }
 }
 
 dependencies {
@@ -30,6 +31,8 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
     implementation("cd.arnett:cattamands:1.A.2")
     implementation 'com.jeff-media:custom-block-data:2.2.4'
+    implementation 'com.jeff-media:custom-block-data:2.2.4'
+    compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.13")
 }
 
 tasks {
@@ -78,5 +81,20 @@ publishing {
             version = '0.1.6'
             from components.java
         }
+    }
+}
+
+configurations.configureEach {
+    resolutionStrategy {
+        // This tells Gradle to ignore those "strictly" locks
+        // and just use the highest version found (which Paper usually has)
+        capabilitiesResolution.all {
+            selectHighestVersion()
+        }
+
+        // Specifically force these three problematic ones to the versions Paper wants
+        force 'com.google.guava:guava:33.3.1-jre'
+        force 'com.google.code.gson:gson:2.11.0'
+        force 'it.unimi.dsi:fastutil:8.5.15'
     }
 }

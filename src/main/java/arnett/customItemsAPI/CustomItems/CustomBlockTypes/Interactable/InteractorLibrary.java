@@ -44,6 +44,10 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
     {
         return new Vector(0, .5f, .5f);
     }
+    public Sound getPlacementSound()
+    {
+        return null;
+    }
 
     public float getWallHeight()
     {
@@ -201,6 +205,11 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
 
         //play the swing animation to emulate placing
         e.getPlayer().swingHand(e.getHand());
+
+        Sound placeSound = getPlacementSound();
+
+        if(placeSound != null)
+            placeSpot.getWorld().playSound(placeSpot, placeSound, 1, 1);
 
         return interaction;
     }
