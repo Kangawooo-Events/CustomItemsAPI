@@ -19,6 +19,8 @@ import org.bukkit.craftbukkit.block.impl.CraftSweetBerryBush;
 import org.bukkit.entity.Player;
 import org.joml.Quaternionf;
 
+import java.util.Set;
+
 public class PlacementHelper {
 
     /**

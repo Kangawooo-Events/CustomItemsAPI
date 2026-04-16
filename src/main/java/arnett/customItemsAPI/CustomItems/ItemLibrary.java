@@ -1,11 +1,12 @@
 package arnett.customItemsAPI.CustomItems;
 
-import cd.arnett.cattamands.arguments.ArgumentHelper;
-import cd.arnett.cattamands.arguments.Cattarameter;
-import cd.arnett.cattamands.cattamand.Cattamand;
-import cd.arnett.cattamands.cattamand.LiteralCattamand;
+import cd.arnett.caddamands.cattamands.arguments.ArgumentHelper;
+import cd.arnett.caddamands.cattamands.arguments.Cattarameter;
+import cd.arnett.caddamands.cattamands.cattamand.Cattamand;
+import cd.arnett.caddamands.cattamands.cattamand.LiteralCattamand;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.sk89q.worldguard.protection.flags.Flags;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -24,6 +25,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public abstract class ItemLibrary {
 
@@ -77,7 +79,7 @@ public abstract class ItemLibrary {
         return stack;
     }
 
-    public Cattamand getGiveCommand()
+    public Cattamand getGiveItemCommand()
     {
         return new LiteralCattamand(
                 getName(),
@@ -88,16 +90,25 @@ public abstract class ItemLibrary {
                                 IntegerArgumentType.integer(
                                         0,
                                         getBaseMaterial().getMaxStackSize()
-                                )
+                                ),
+                                (Command<CommandSourceStack>) (ctx) -> {
+                                    int count = ctx.getArgument("count", int.class);
+
+                                    //get the player(s) to give to
+                                    ArgumentHelper.getPlayersFromArgs("receiver", ctx).forEach(player -> {
+                                        player.give(getItem(count));
+                                    });
+
+                                    //successful execution
+                                    return Command.SINGLE_SUCCESS;
+                                }
                         )
                 ),
                 context -> {
 
-                    int count = context.getArgument("count", int.class);
-
                     //get the player(s) to give to
                     ArgumentHelper.getPlayersFromArgs("receiver", context).forEach(player -> {
-                        player.give(getItem(count));
+                        player.give(getItem());
                     });
 
                     //successful execution
@@ -176,6 +187,11 @@ public abstract class ItemLibrary {
     }
 
     public boolean keepBaseCrafts()
+    {
+        return false;
+    }
+
+    public boolean overrideWorldGuardInteract()
     {
         return false;
     }

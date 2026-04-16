@@ -2,13 +2,13 @@ package arnett.customItemsAPI.Listeners;
 
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.Interactable.InteractorLibrary;
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlacementHelper;
+import arnett.customItemsAPI.CustomItemsAPI;
 import arnett.customItemsAPI.Helpers.WorldGuardHelper;
 import arnett.customItemsAPI.ItemManager;
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.BlockState.BlockStateLibrary;
 import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlaceableLibrary;
 import arnett.customItemsAPI.CustomItems.ItemLibrary;
 import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
-import com.sk89q.worldguard.protection.flags.Flags;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Material;
@@ -42,9 +42,6 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onPlaceBlock(BlockPlaceEvent e)
     {
-        if(e.isCancelled())
-            return;
-
         //check if this is taken by a custom block
         //do a thorough check here because we can't do the quick exit if it is not a listed material type
         if(ItemManager.getLibraryThorough(e.getBlock()) != null)
@@ -72,24 +69,15 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onInteract(PlayerInteractEvent e)
     {
+        //block clicked
+        blockInteractCheck(e);
 
-        if(e.useInteractedBlock() != Event.Result.DENY)
-        {
-            //block clicked
-            blockInteractCheck(e);
-        }
-
-        if(e.useItemInHand() != Event.Result.DENY)
-            //item used
-            itemInteractCheck(e);
+        itemInteractCheck(e);
     }
 
     @EventHandler
     public void onInteractEntity(PlayerInteractEntityEvent e)
     {
-        if(e.isCancelled())
-            return;
-
         //get item used
         ItemStack used = e.getPlayer().getInventory().getItem(e.getHand());
 
@@ -99,7 +87,9 @@ public class GeneralItemListener implements Listener {
         if(data == null)
             return;
 
-        if(!WorldGuardHelper.canWorldGuardFlag(e.getPlayer(), e.getRightClicked().getLocation(), Flags.INTERACT))
+        if(CustomItemsAPI.worldGuardEnabled &&
+                !data.overrideWorldGuardInteract() &&
+                !WorldGuardHelper.canWorldGuardInteract(e.getPlayer(), e.getRightClicked().getLocation()))
         {
             e.setCancelled(true);
             return;
@@ -120,7 +110,9 @@ public class GeneralItemListener implements Listener {
         if(data == null)
             return;
 
-        if(!WorldGuardHelper.canWorldGuardFlag(e.getPlayer(), e.getClickedBlock().getLocation(), Flags.INTERACT))
+        if(CustomItemsAPI.worldGuardEnabled &&
+                !data.overrideWorldGuardInteract() &&
+                !WorldGuardHelper.canWorldGuardInteract(e.getPlayer(), e.getClickedBlock().getLocation()))
         {
             e.setCancelled(true);
             return;
@@ -130,7 +122,7 @@ public class GeneralItemListener implements Listener {
         if(data instanceof BlockStateLibrary blockStateData)
         {
             //call item's interact function
-            blockStateData.onBlockInteracted(e);
+            blockStateData.onBlockInteracted(e, e.useInteractedBlock());
         }
     }
 
@@ -145,7 +137,6 @@ public class GeneralItemListener implements Listener {
 
         //call its use function
         data.onItemUsed(e);
-
 
         Block clicked = e.getClickedBlock();
 
@@ -164,7 +155,8 @@ public class GeneralItemListener implements Listener {
         }
 
         //maybe they are trying to place it
-        if(!WorldGuardHelper.canWorldGuardFlag(e.getPlayer(), e.getInteractionPoint(), Flags.BUILD))
+        if(CustomItemsAPI.worldGuardEnabled &&
+                !WorldGuardHelper.canWorldGuardBuild(e.getPlayer(), e.getInteractionPoint()))
         {
             e.setCancelled(true);
             return;
@@ -174,7 +166,7 @@ public class GeneralItemListener implements Listener {
         if(data instanceof InteractorLibrary interactorData)
         {
             //call item's place function
-            interactorData.onItemPlacementInteraction(e);
+            interactorData.onItemPlacementInteraction(e, e.useItemInHand());
         }
     }
 
@@ -237,9 +229,6 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onBlockRemovedByPlayer(BlockBreakEvent e)
     {
-        if(e.isCancelled())
-            return;
-
         //get custom data (getLibrary has a quick exit)
         ItemLibrary data = ItemManager.getLibrary(e.getBlock());
 
@@ -392,9 +381,6 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void entityDamageEntity(EntityDamageByEntityEvent e)
     {
-        if(e.isCancelled())
-            return;
-
         //if it is not damaged by one of there destruction events don't do anything
         if(!(e.getDamager() instanceof Player ||
                 e.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
@@ -415,15 +401,22 @@ public class GeneralItemListener implements Listener {
             return;
         }
 
+        //maybe they are trying to place it
+        if(e.getDamager() instanceof Player player &&
+                CustomItemsAPI.worldGuardEnabled &&
+                !WorldGuardHelper.canWorldGuardBreak(player, e.getEntity().getLocation()))
+        {
+            e.setCancelled(true);
+            return;
+        }
+
+
         interactorLibrary.onInteractorBroken(e, interaction);
     }
 
     @EventHandler
     public void onPlayerInteractEntity(PlayerInteractEntityEvent e)
     {
-        if(e.isCancelled())
-            return;
-
         if(!(e.getRightClicked() instanceof Interaction interaction))
             return;
 
@@ -434,7 +427,9 @@ public class GeneralItemListener implements Listener {
             return;
         }
 
-        if(!WorldGuardHelper.canWorldGuardFlag(e.getPlayer(), e.getRightClicked().getLocation(), Flags.INTERACT))
+        if(CustomItemsAPI.worldGuardEnabled &&
+                !lib.overrideWorldGuardInteract() &&
+                !WorldGuardHelper.canWorldGuardInteract(e.getPlayer(), e.getRightClicked().getLocation()))
         {
             e.setCancelled(true);
             return;
@@ -477,8 +472,6 @@ public class GeneralItemListener implements Listener {
 
                 //check the next block
                 Block into = block.getRelative(e.getDirection());
-
-                System.out.println(into.getLocation());
 
                 ItemLibrary lib = ItemManager.getLibrary(into);
 
@@ -579,7 +572,6 @@ public class GeneralItemListener implements Listener {
 
             if(lib != null)
             {
-                System.out.println(lib.keepBaseCrafts());
                 //remove the result
                 return !lib.keepBaseCrafts();
             }

@@ -68,9 +68,9 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
         return interaction.getPersistentDataContainer().has(getIdentifier());
     }
 
-    public Interaction onItemPlacementInteraction(PlayerInteractEvent e)
+    public Interaction onItemPlacementInteraction(PlayerInteractEvent e, Event.Result canUseItem)
     {
-        if(e.isCancelled())
+        if(canUseItem == Event.Result.DENY)
             return null;
 
         //the item was placed
@@ -107,7 +107,12 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
         //remove the block if it was replaced
         placeAtBlock.breakNaturally();
 
-        boolean isOnWall = isWallFace(displayInfo.faceOn());
+
+        boolean isOnWall = switch (getDirectionality())
+        {
+            case Wall, WallBlock, WallD, WallUD, WallDBlock, WallUDBlock -> isWallFace(displayInfo.faceOn());
+            default -> false;
+        };
 
         Location hitboxCenter = displayInfo.location().clone();
 
@@ -217,6 +222,9 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
 
     public void onInteractorBroken(EntityDamageByEntityEvent e, Interaction interaction)
     {
+        if (e.isCancelled())
+            return;
+
         naturalBlockBreak(interaction,
                 !(e.getDamager() instanceof Player player) || player.getGameMode() != GameMode.CREATIVE);
     }
@@ -335,7 +343,6 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
     }
 
     private void dropPlaceableItem(Interaction breakInteraction) {
-        System.out.println("moving");
         //drop the item of the base material and call on BlockDrop item for consistency
         //because this is what it would normally look like if the player broke a block
         breakInteraction.getWorld().dropItemNaturally(

@@ -1,12 +1,14 @@
 package arnett.customItemsAPI;
 
 import arnett.customItemsAPI.CustomItems.ItemLibrary;
-import cd.arnett.cattamands.arguments.Cattarameter;
-import cd.arnett.cattamands.cattamand.Cattamand;
-import cd.arnett.cattamands.cattamand.LiteralCattamand;
+import cd.arnett.caddamands.cattamands.arguments.Cattarameter;
+import cd.arnett.caddamands.cattamands.cattamand.Cattamand;
+import cd.arnett.caddamands.cattamands.cattamand.LiteralCattamand;
 import com.jeff_media.customblockdata.CustomBlockData;
+import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import io.papermc.paper.persistence.PersistentDataContainerView;
+import io.papermc.paper.plugin.lifecycle.event.registrar.ReloadableRegistrarEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
 import org.bukkit.Material;
@@ -29,6 +31,7 @@ public final class ItemManager {
 
     public static NamespacedKey DisplayLinkNamespace = new NamespacedKey("customitems", "linkeddisplay");
 
+
     public static void registerItems(JavaPlugin plugin, List<ItemLibrary> items)
     {
         ArrayList<Cattamand> giveCommands = new ArrayList<>();
@@ -41,8 +44,15 @@ public final class ItemManager {
             registerRecipes(plugin, item);
             registerEvents(plugin, item);
 
-            //get the list of give command arguments
-            giveCommands.add(item.getGiveCommand());
+        });
+    }
+
+    static void registerGiveCommand(ReloadableRegistrarEvent<Commands> event)
+    {
+        ArrayList<Cattamand> giveCommands = new ArrayList<>();
+
+        items.forEach(( item, lib) -> {
+            giveCommands.add(lib.getGiveItemCommand());
         });
 
         //register the give commands of the items
@@ -53,11 +63,13 @@ public final class ItemManager {
                                 ArgumentTypes.players()
                         )
                 ))
-                .children(giveCommands)
+                .children(
+                        giveCommands
+                )
                 .aliases(List.of("cig", "cg", "cgive"))
                 .permission("op")
                 .build()
-                .registerAsRoot(plugin);
+                .registerAsRoot(CustomItemsAPI.singleton, event);
     }
 
     static void registerEvents(JavaPlugin plugin, ItemLibrary item)

@@ -31,11 +31,25 @@ public class WorldGuardHelper {
 
     public static boolean canWorldGuardInteract(Player player, Location spot)
     {
+        if(!CustomItemsAPI.worldGuardEnabled)
+            return true;
+
         return canWorldGuardFlag(player, spot, Flags.INTERACT);
     }
 
     public static boolean canWorldGuardBuild(Player player, Location spot)
     {
+        if(!CustomItemsAPI.worldGuardEnabled)
+            return true;
+
         return canWorldGuardFlag(player, spot, Flags.BUILD);
+    }
+
+    public static boolean canWorldGuardBreak(Player player, Location spot)
+    {
+        if(!CustomItemsAPI.worldGuardEnabled)
+            return true;
+
+        return canWorldGuardFlag(player, spot, Flags.BLOCK_BREAK);
     }
 }

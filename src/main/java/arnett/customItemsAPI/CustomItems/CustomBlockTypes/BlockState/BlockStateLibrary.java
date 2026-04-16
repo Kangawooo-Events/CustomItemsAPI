@@ -13,6 +13,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.ItemDisplay;
+import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPhysicsEvent;
@@ -102,7 +103,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
         e.setCancelled(true);
     }
 
-    public void onBlockInteracted(PlayerInteractEvent e)
+    public void onBlockInteracted(PlayerInteractEvent e, Event.Result canUseBlock)
     {
         return;
     }

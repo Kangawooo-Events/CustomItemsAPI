@@ -4,3 +4,6 @@ main: arnett.customItemsAPI.CustomItemsAPI
 api-version: '1.21'
 authors: [ Catten, Cadden, Arnett ]
 description: Enables the easy creation of new worlds and some extra features
+
+# load this plugin last
+load: POSTWORLD
