@@ -47,6 +47,7 @@ public final class ItemManager {
         });
     }
 
+    
     static void registerGiveCommand(ReloadableRegistrarEvent<Commands> event)
     {
         ArrayList<Cattamand> giveCommands = new ArrayList<>();
