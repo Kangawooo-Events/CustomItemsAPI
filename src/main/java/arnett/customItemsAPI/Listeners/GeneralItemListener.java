@@ -32,6 +32,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Collection;
+import java.util.HashSet;
 
 public class GeneralItemListener implements Listener {
 
@@ -443,9 +444,10 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onPistonPush(BlockPistonExtendEvent e)
     {
-        //get last pushed block
+        //No blocks being pushed
         if(e.getBlocks().isEmpty())
         {
+            System.out.println("Push nothing");
             Block tip = e.getBlock().getRelative(e.getDirection());
 
             ItemLibrary lib = ItemManager.getLibrary(tip);
@@ -453,8 +455,11 @@ public class GeneralItemListener implements Listener {
             if(lib == null)
                 return;
 
+            System.out.println("Push lib");
             if(!(lib instanceof PlaceableLibrary blockLib))
                 return;
+
+            System.out.println("Push Custom Block");
 
             e.setCancelled(switch (blockLib.getPistonPushable())
             {
@@ -466,33 +471,81 @@ public class GeneralItemListener implements Listener {
                 default -> true;
             });
         }
+
+        //blocks being pushed
         else {
+
+            HashSet<Block> processed = new HashSet<>();
+            HashSet<Block> into = new HashSet<>();
+
             //check the blocks being pushed if they are a custom block
             if(e.getBlocks().stream().anyMatch(block -> {
 
-                //check the next block
-                Block into = block.getRelative(e.getDirection());
 
-                ItemLibrary lib = ItemManager.getLibrary(into);
+                processed.add(block);
+                into.add(block.getRelative(e.getDirection()));
+
+                ItemLibrary lib = ItemManager.getLibrary(block);
 
                 if(lib == null)
                     return false;
 
+                //check the current block
                 if(!(lib instanceof PlaceableLibrary blockLib))
                     return false;
-
-                return switch (blockLib.getPistonPushable())
+                else
                 {
-                    case BREAK -> {
-                        blockLib.naturalBlockBreak(into, true);
-                        yield false;
-                    }
-                    case BLOCK, MOVE -> true;
-                    default -> true;
-                };
+                    //block is custom
+                    return switch (blockLib.getPistonPushable())
+                    {
+                        case BREAK -> {
+                            blockLib.naturalBlockBreak(block, true);
+                            yield false;
+                        }
+                        case BLOCK, MOVE -> true;
+                        default -> true;
+                    };
+                }
+
+
             }))
             {
                 e.setCancelled(true);
+            }
+
+            //blocks being pushed into
+            else
+            {
+                System.out.println("Push into");
+
+
+                into.removeAll(processed);
+
+                for(Block block : into)
+                {
+                    System.out.println("Tipping " + block.getType());
+                    ItemLibrary lib = ItemManager.getLibrary(block);
+
+                    if(lib == null)
+                        continue;
+
+                    if(!(lib instanceof PlaceableLibrary blockLib))
+                        continue;
+
+                    if(switch (blockLib.getPistonPushable())
+                    {
+                        case BREAK -> {
+                            blockLib.naturalBlockBreak(block, true);
+                            yield false;
+                        }
+                        case BLOCK, MOVE -> true;
+                        default -> true;
+                    })
+                    {
+                        e.setCancelled(true);
+                        return;
+                    }
+                }
             }
         }
 
