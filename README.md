@@ -14,5 +14,5 @@ For plugin use, **requires** the Caddamands plugin
         ...
         compileOnly("cd.arnett:customitemsapi:<Package-Version>")
         ...
-        }
+    }
 ````
