@@ -1,1 +1,13 @@
-**REQUIRES** Cattamands installed in maven to work (just ask me if you need help with that)
+
+For plugin use, **requires** the Caddamands plugin
+
+For dependancy use: 
+
+````
+    maven {
+        url = uri("https://maven.pkg.github.com/kangawooo-events/customitemsapi")
+    }
+    dependencies {
+        compileOnly("cd.arnett:customitemsapi:<Package-Version>")
+    }
+````
