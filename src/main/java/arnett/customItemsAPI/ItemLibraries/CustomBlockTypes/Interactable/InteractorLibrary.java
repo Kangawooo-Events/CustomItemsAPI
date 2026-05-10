@@ -1,15 +1,14 @@
-package arnett.customItemsAPI.CustomItems.CustomBlockTypes.Interactable;
+package arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.Interactable;
 
-import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlaceableLibrary;
-import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlacementData;
-import arnett.customItemsAPI.CustomItems.ItemLibrary;
+import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.PlaceableLibrary;
+import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.PlacementData;
+import arnett.customItemsAPI.ItemLibraries.ItemLibrary;
 import arnett.customItemsAPI.CustomItemsAPI;
 import arnett.customItemsAPI.ItemManager;
 import com.jeff_media.customblockdata.CustomBlockData;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.PistonMoveReaction;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockExplodeEvent;
@@ -171,7 +170,7 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
         //tag this interactor with its display's UUID for access
         //also creates the item display
         pdc.set(
-                ItemManager.DisplayLinkNamespace,
+                PlaceableLibrary.DisplayLinkNamespace,
                 PersistentDataType.STRING,
                 createDisplay(displayInfo).toString()
         );
@@ -241,12 +240,12 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
 
     public UUID getDisplayEntityID(Entity Interactor)
     {
-        if(!Interactor.getPersistentDataContainer().has(ItemManager.DisplayLinkNamespace))
+        if(!Interactor.getPersistentDataContainer().has(PlaceableLibrary.DisplayLinkNamespace))
             return null;
 
         return UUID.fromString(
                 Interactor.getPersistentDataContainer()
-                        .get(ItemManager.DisplayLinkNamespace, PersistentDataType.STRING)
+                        .get(PlaceableLibrary.DisplayLinkNamespace, PersistentDataType.STRING)
         );
     }
 
@@ -369,7 +368,7 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
     public static void removeLink(Interaction interaction)
     {
         //get the attached entity
-        String id = interaction.getPersistentDataContainer().get(ItemManager.DisplayLinkNamespace, PersistentDataType.STRING);
+        String id = interaction.getPersistentDataContainer().get(PlaceableLibrary.DisplayLinkNamespace, PersistentDataType.STRING);
 
         if(id == null)
             return;

@@ -19,9 +19,24 @@ import java.util.logging.Logger;
 
 public final class CustomItemsAPI extends JavaPlugin {
 
+    //region Properties
+
+    /*=================================================================================================
+                    -  Properties  -
+    =================================================================================================*/
+
     public static Logger logger;
     public static JavaPlugin singleton;
     public static boolean worldGuardEnabled;
+
+    //endregion
+
+
+    //region Enable / Disable
+
+    /*=================================================================================================
+                    -  Enable / Disable  -
+    =================================================================================================*/
 
     @Override
     public void onEnable() {
@@ -42,11 +57,18 @@ public final class CustomItemsAPI extends JavaPlugin {
 
         //register the custom block data events
         CustomBlockData.registerListener(this);
-        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS.newHandler(ItemManager::registerGiveCommand).priority(1000));
+
+        //Call registration a single time here so that other plugins have time to add their items
+        getLifecycleManager().registerEventHandler(
+                LifecycleEvents.COMMANDS.newHandler(ItemManager::registerGiveCommand).priority(6767)
+        );
     }
 
     @Override
     public void onDisable() {
         // Plugin shutdown logic
     }
+
+    //endregion
+
 }

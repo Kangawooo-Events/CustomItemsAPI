@@ -17,19 +17,33 @@ import org.bukkit.entity.Player;
 import java.util.List;
 
 public class DisplayHelper {
-    public static void setGlowForPlayer(Player player, Entity e, boolean doGlow, String textColor)
+
+    //region Entity Glow
+
+    /*=================================================================================================
+                    -  Entity Glow  -
+    =================================================================================================*/
+
+    /**
+     * Sends glow packet to make Entity glow for ONE player
+     * @param player Player who recieves the glow packet
+     * @param entity Entity to set glow
+     * @param doGlow Whether this packet should make the entity glow or remove the entities glow
+     * @param textColor Color for the entity to glow
+     */
+    public static void setGlowForPlayer(Player player, Entity entity, boolean doGlow, String textColor)
     {
-        ChatFormatting color = TextColorHelper.getTextFormatColor(textColor);
+        ChatFormatting color = getTextFormatColor(textColor);
 
         EntityDataAccessor<Byte> entityFlagAccessor = new EntityDataAccessor<>(0, EntityDataSerializers.BYTE);
         Scoreboard glowScoreboard = new Scoreboard();
 
         //make sure entity is present
-        if(e == null)
+        if(entity == null)
             return;
 
         ServerPlayer cPlayer = ((CraftPlayer)player).getHandle();
-        net.minecraft.world.entity.Entity cEntity = ((CraftEntity)e).getHandle();
+        net.minecraft.world.entity.Entity cEntity = ((CraftEntity)entity).getHandle();
 
         //grab the data
         SynchedEntityData entityData = cEntity.getEntityData();
@@ -66,7 +80,7 @@ public class DisplayHelper {
                 //this kinda just pretends like the entity is a player and ships it's uuid instead
                 ClientboundSetPlayerTeamPacket.createPlayerPacket(
                         glowTeam,
-                        e.getUniqueId().toString(),
+                        entity.getUniqueId().toString(),
                         doGlow ? ClientboundSetPlayerTeamPacket.Action.ADD : ClientboundSetPlayerTeamPacket.Action.REMOVE
                 )
         );
@@ -74,7 +88,7 @@ public class DisplayHelper {
         //ship glow to the player
         cPlayer.connection.send(
                 new ClientboundSetEntityDataPacket(
-                        e.getEntityId(),
+                        entity.getEntityId(),
                         glowingData
                 ));
 
@@ -83,4 +97,45 @@ public class DisplayHelper {
         flags &= ~0x40;
         entityData.set(entityFlagAccessor, flags);
     }
+
+    /**
+     * Gets a Text color from a string (Case Insensitive), ex// light_gray -> ChatFormatting.GRAY <br>
+     * Exists because ChatFormatting is nms so user may not have it.<br>
+     * You may also use Hex code ex// "ABCDEF" -> really light blue
+     * @param color Name of color
+     * @return ChatFormatting color
+     */
+    public static ChatFormatting getTextFormatColor(String color)
+    {
+        try {
+            //unfortunately, these colors don't match the ChatFormatting colors so we gotta do some mismatching
+            return switch (color.toUpperCase())
+            {
+                case "LIGHT_GRAY" -> ChatFormatting.GRAY;
+                case "GRAY" -> ChatFormatting.DARK_GRAY;
+                case "BLACK" -> ChatFormatting.BLACK;
+                case "BROWN" -> ChatFormatting.GOLD;
+                case "RED" -> ChatFormatting.RED;
+                case "ORANGE" -> ChatFormatting.GOLD;
+                case "YELLOW" -> ChatFormatting.YELLOW;
+                case "LIME" -> ChatFormatting.GREEN;
+                case "GREEN" -> ChatFormatting.GREEN;
+                case "CYAN" -> ChatFormatting.AQUA;
+                case "LIGHT_BLUE" -> ChatFormatting.BLUE;
+                case "BLUE" -> ChatFormatting.DARK_BLUE;
+                case "PURPLE" -> ChatFormatting.DARK_PURPLE;
+                case "MAGENTA" -> ChatFormatting.LIGHT_PURPLE;
+                case "PINK" -> ChatFormatting.LIGHT_PURPLE;
+                default -> ChatFormatting.getByHexValue(Integer.parseInt(color.substring(0, 6), 16));
+            };
+
+        }
+        catch (Exception e)
+        {
+            return ChatFormatting.WHITE;
+        }
+    }
+
+    //endregion
+
 }

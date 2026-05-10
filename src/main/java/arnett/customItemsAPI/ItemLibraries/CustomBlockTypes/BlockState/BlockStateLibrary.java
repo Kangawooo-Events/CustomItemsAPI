@@ -1,14 +1,11 @@
-package arnett.customItemsAPI.CustomItems.CustomBlockTypes.BlockState;
+package arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.BlockState;
 
-import arnett.customItemsAPI.CustomItems.Directionality;
-import arnett.customItemsAPI.ItemManager;
-import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlaceableLibrary;
-import arnett.customItemsAPI.CustomItems.ItemLibrary;
+import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.PlaceableLibrary;
+import arnett.customItemsAPI.ItemLibraries.ItemLibrary;
 import arnett.customItemsAPI.CustomItemsAPI;
 import com.jeff_media.customblockdata.CustomBlockData;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.PistonMoveReaction;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
@@ -84,7 +81,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
 
         //Link this block to the display
         new CustomBlockData(e.getBlock(), CustomItemsAPI.singleton).set(
-                ItemManager.DisplayLinkNamespace,
+                PlaceableLibrary.DisplayLinkNamespace,
                 PersistentDataType.STRING,
                 id.toString()
         );
@@ -122,7 +119,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
 
         return UUID.fromString(
                 new CustomBlockData(block, CustomItemsAPI.singleton)
-                        .get(ItemManager.DisplayLinkNamespace, PersistentDataType.STRING)
+                        .get(PlaceableLibrary.DisplayLinkNamespace, PersistentDataType.STRING)
         );
     }
 
@@ -235,7 +232,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
     public static void removeLink(CustomBlockData blockData)
     {
         //get the attached entity
-        String id = blockData.get(ItemManager.DisplayLinkNamespace, PersistentDataType.STRING);
+        String id = blockData.get(PlaceableLibrary.DisplayLinkNamespace, PersistentDataType.STRING);
 
         //get the id
         UUID entityId = UUID.fromString(id);

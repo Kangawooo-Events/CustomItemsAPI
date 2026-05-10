@@ -1,4 +1,4 @@
-package arnett.customItemsAPI.CustomItems;
+package arnett.customItemsAPI.ItemLibraries;
 
 import cd.arnett.caddamands.cattamands.arguments.ArgumentHelper;
 import cd.arnett.caddamands.cattamands.arguments.Cattarameter;
@@ -6,10 +6,7 @@ import cd.arnett.caddamands.cattamands.cattamand.Cattamand;
 import cd.arnett.caddamands.cattamands.cattamand.LiteralCattamand;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.sk89q.worldguard.protection.flags.Flags;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -25,32 +22,60 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public abstract class ItemLibrary {
 
+    /**
+     * Plugin to whom this item belongs
+     */
     protected JavaPlugin plugin;
 
+    /**
+     * @return Namespace used to identify the specific item
+     */
     public abstract NamespacedKey getIdentifier();
 
+    /**
+     * Namespace used to identify something generally as a custom item
+     */
     public static NamespacedKey customItemTag = new NamespacedKey("customitems", "customitem");
 
+    /**
+     * @return Namespaced Key which leads to the Item's resource in a resource pack
+     */
     public abstract NamespacedKey getItemModelKey();
 
+    /**
+     * @return List of Listeners to be registered along with this item,
+     * useful for unloading whenever that gets implemented, but I wouldn't
+     * worry about using this it's not a bih deal
+     */
     public List<Listener> getListeners()
     {
         return List.of();
     }
 
+    /**
+     * @return The base material this item uses in inventory
+     */
     public abstract Material getBaseMaterial();
 
+    /**
+     * @return The name of this item
+     */
     public abstract String getName();
 
+    /**
+     * @return The Display name of this item (defaults to getName())
+     */
     public String getDisplayName()
     {
         return getName();
     }
 
+    /**
+     * @return A new ItemStack of this Libraries item
+     */
     public ItemStack getItem() {
         //create item stack of config set material
         ItemStack item = ItemStack.of(getBaseMaterial());
@@ -72,6 +97,10 @@ public abstract class ItemLibrary {
         return item;
     }
 
+    /**
+     * @param count amount to set itemstack to
+     * @return Itemstack of this Item with (count) amount
+     */
     public ItemStack getItem(int count)
     {
         ItemStack stack = getItem();

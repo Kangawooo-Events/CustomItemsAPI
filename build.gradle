@@ -1,14 +1,14 @@
 
 plugins {
     id 'java'
+    id 'maven-publish'
     id 'com.gradleup.shadow' version '9.4.1'
     id("xyz.jpenilla.run-paper") version "2.3.1"
     id("io.papermc.paperweight.userdev") version "2.0.0-beta.19"
-    id 'maven-publish'
 }
 
 group = 'cd.arnett'
-version = '0.1'
+version = '1.A.0'
 
 repositories {
     mavenCentral()
@@ -19,10 +19,6 @@ repositories {
     }
     maven {
         url = uri("https://maven.pkg.github.com/kangawooo-events/caddamands")
-        credentials {
-            username = project.findProperty("github.user") as String ?: System.getenv("github.user")
-            password = project.findProperty("github.token") as String ?: System.getenv("github.token")
-        }
     }
     maven { url "https://maven.enginehub.org/repo/" }
 }
@@ -30,9 +26,9 @@ repositories {
 dependencies {
     paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
-    compileOnly("cd.arnett:caddamands:2.A.6")
-    implementation 'com.jeff-media:custom-block-data:2.2.4'
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.13")
+    implementation 'com.jeff-media:custom-block-data:2.2.4'
+    compileOnly("cd.arnett:caddamands:3.A.1")
 }
 
 tasks {
@@ -78,8 +74,19 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'cd.arnett'
             artifactId = 'customitemsapi'
-            version = '0.1.6'
+            version = '1.A.0'
             from components.java
+        }
+    }
+    repositories {
+        maven {
+            name = "CustomItemsAPI"
+            url = uri("https://maven.pkg.github.com/kangawooo-events/CustomItemsAPI")
+            credentials {
+                // Checks gradle.properties first, then Environment Variables
+                username = project.findProperty("github.user") as String ?: System.getenv("github.user")
+                password = project.findProperty("github.token") as String ?: System.getenv("github.token")
+            }
         }
     }
 }

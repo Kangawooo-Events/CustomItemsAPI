@@ -1,9 +1,11 @@
 name: CustomItemsAPI
-version: '0.1'
+version: '1.A.0'
 main: arnett.customItemsAPI.CustomItemsAPI
 api-version: '1.21'
 authors: [ Catten, Cadden, Arnett ]
 description: Enables the easy creation of new worlds and some extra features
+
+soft-depend: [WorldGuard]
 
 # load this plugin last
 load: POSTWORLD

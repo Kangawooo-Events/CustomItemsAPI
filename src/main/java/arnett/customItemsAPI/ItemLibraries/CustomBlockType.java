@@ -1,4 +1,4 @@
-package arnett.customItemsAPI.CustomItems;
+package arnett.customItemsAPI.ItemLibraries;
 
 public enum CustomBlockType {
     Interactable, // creates display and interactable

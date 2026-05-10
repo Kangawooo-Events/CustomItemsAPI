@@ -1,13 +1,13 @@
 package arnett.customItemsAPI.Listeners;
 
-import arnett.customItemsAPI.CustomItems.CustomBlockTypes.Interactable.InteractorLibrary;
-import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlacementHelper;
+import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.Interactable.InteractorLibrary;
+import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.PlacementHelper;
 import arnett.customItemsAPI.CustomItemsAPI;
 import arnett.customItemsAPI.Helpers.WorldGuardHelper;
 import arnett.customItemsAPI.ItemManager;
-import arnett.customItemsAPI.CustomItems.CustomBlockTypes.BlockState.BlockStateLibrary;
-import arnett.customItemsAPI.CustomItems.CustomBlockTypes.PlaceableLibrary;
-import arnett.customItemsAPI.CustomItems.ItemLibrary;
+import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.BlockState.BlockStateLibrary;
+import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.PlaceableLibrary;
+import arnett.customItemsAPI.ItemLibraries.ItemLibrary;
 import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.FluidCollisionMode;
@@ -15,7 +15,6 @@ import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.Crafter;
-import org.bukkit.craftbukkit.event.CraftEventFactory;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
@@ -37,15 +36,18 @@ import java.util.HashSet;
 public class GeneralItemListener implements Listener {
 
 
-    // ================ PLACEMENT ============================
+    //region Player Place / Break
 
+    /*=================================================================================================
+                    -  Placement  -
+    =================================================================================================*/
 
     @EventHandler
     public void onPlaceBlock(BlockPlaceEvent e)
     {
         //check if this is taken by a custom block
         //do a thorough check here because we can't do the quick exit if it is not a listed material type
-        if(ItemManager.getLibraryThorough(e.getBlock()) != null)
+        if(ItemManager.getLibrary(e.getBlock()) != null)
         {
             e.setCancelled(true);
             return;
@@ -61,11 +63,30 @@ public class GeneralItemListener implements Listener {
             blockData.onBlockPlaced(e);
     }
 
+    @EventHandler
+    public void onBlockRemovedByPlayer(BlockBreakEvent e)
+    {
+        //get custom data (getLibrary has a quick exit)
+        ItemLibrary data = ItemManager.getLibrary(e.getBlock());
 
+        //is this a custom item
+        if(data == null)
+            return;
 
-    // ================ INTERACTIONS ============================
+        if(data instanceof BlockStateLibrary blockStateData)
+            //call item's break function
+            blockStateData.onBlockBroken(e);
 
+    }
 
+    //endregion
+
+    //also contains Placement for non-placable items
+    //region Use
+
+    /*=================================================================================================
+                    -  Use  -
+    =================================================================================================*/
 
     @EventHandler
     public void onInteract(PlayerInteractEvent e)
@@ -157,7 +178,7 @@ public class GeneralItemListener implements Listener {
 
         //maybe they are trying to place it
         if(CustomItemsAPI.worldGuardEnabled &&
-                !WorldGuardHelper.canWorldGuardBuild(e.getPlayer(), e.getInteractionPoint()))
+                !WorldGuardHelper.canWorldGuardPlace(e.getPlayer(), e.getInteractionPoint()))
         {
             e.setCancelled(true);
             return;
@@ -170,6 +191,15 @@ public class GeneralItemListener implements Listener {
             interactorData.onItemPlacementInteraction(e, e.useItemInHand());
         }
     }
+
+    //endregion
+
+
+    //region Copy
+
+    /*=================================================================================================
+                    -  Copy  -
+    =================================================================================================*/
 
     @EventHandler
     public void onCopy(PlayerPickItemEvent e)
@@ -206,8 +236,17 @@ public class GeneralItemListener implements Listener {
         }
     }
 
+    //endregion
+
+
+    //region Block Events
+
+    /*=================================================================================================
+                    -  Block Events  -
+    =================================================================================================*/
+
     @EventHandler
-    public void onPhsyicisEvent(BlockPhysicsEvent e)
+    public void onPhysicsEvent(BlockPhysicsEvent e)
     {
         if(e.isCancelled())
             return;
@@ -223,25 +262,14 @@ public class GeneralItemListener implements Listener {
 
     }
 
+    //endregion
 
-    // =================== BREAKAGE ==============================
 
+    //region Explosions
 
-    @EventHandler
-    public void onBlockRemovedByPlayer(BlockBreakEvent e)
-    {
-        //get custom data (getLibrary has a quick exit)
-        ItemLibrary data = ItemManager.getLibrary(e.getBlock());
-
-        //is this a custom item
-        if(data == null)
-            return;
-
-        if(data instanceof BlockStateLibrary blockStateData)
-            //call item's break function
-            blockStateData.onBlockBroken(e);
-
-    }
+    /*=================================================================================================
+                    -  Explosions  -
+    =================================================================================================*/
 
     //when an entity explodes
     @EventHandler
@@ -379,6 +407,15 @@ public class GeneralItemListener implements Listener {
 
     }
 
+    //endregion
+
+
+    //region Entity
+
+    /*=================================================================================================
+                    -  Entity  -
+    =================================================================================================*/
+
     @EventHandler
     public void entityDamageEntity(EntityDamageByEntityEvent e)
     {
@@ -439,7 +476,14 @@ public class GeneralItemListener implements Listener {
         interactorLibrary.onInteractorInteracted(e, interaction);
     }
 
-    // =================== PISTONS =====================================
+    //endregion
+
+
+    //region Piston Push / Pull
+
+    /*=================================================================================================
+                    -  Piston Push / Pull  -
+    =================================================================================================*/
 
     @EventHandler
     public void onPistonPush(BlockPistonExtendEvent e)
@@ -447,7 +491,6 @@ public class GeneralItemListener implements Listener {
         //No blocks being pushed
         if(e.getBlocks().isEmpty())
         {
-            System.out.println("Push nothing");
             Block tip = e.getBlock().getRelative(e.getDirection());
 
             ItemLibrary lib = ItemManager.getLibrary(tip);
@@ -455,11 +498,8 @@ public class GeneralItemListener implements Listener {
             if(lib == null)
                 return;
 
-            System.out.println("Push lib");
             if(!(lib instanceof PlaceableLibrary blockLib))
                 return;
-
-            System.out.println("Push Custom Block");
 
             e.setCancelled(switch (blockLib.getPistonPushable())
             {
@@ -516,14 +556,12 @@ public class GeneralItemListener implements Listener {
             //blocks being pushed into
             else
             {
-                System.out.println("Push into");
 
 
                 into.removeAll(processed);
 
                 for(Block block : into)
                 {
-                    System.out.println("Tipping " + block.getType());
                     ItemLibrary lib = ItemManager.getLibrary(block);
 
                     if(lib == null)
@@ -563,17 +601,14 @@ public class GeneralItemListener implements Listener {
         }
     }
 
-    @EventHandler
-    public void onBlockForm(BlockFormEvent e)
-    {
-        //get library
-        ItemLibrary lib = ItemManager.getLibraryThorough(e.getBlock());
+    //endregion
 
-        if(lib instanceof InteractorLibrary interactor)
-        {
-            interactor.naturalBlockBreak(e.getBlock(), true);
-        }
-    }
+
+    //region CustomBlockData
+
+    /*=================================================================================================
+                    -  CustomBlockData  -
+    =================================================================================================*/
 
     @EventHandler
     public void onDataRemove(CustomBlockDataRemoveEvent e) {
@@ -583,6 +618,15 @@ public class GeneralItemListener implements Listener {
             ((InteractorLibrary) lib).naturalBlockBreak(e.getBlock(), true);
         }
     }
+
+    //endregion
+
+
+    //region Crafting
+
+    /*=================================================================================================
+                    -  Crafting  -
+    =================================================================================================*/
 
     @EventHandler
     public void onItemCraftPrepare(PrepareItemCraftEvent e)
@@ -632,4 +676,28 @@ public class GeneralItemListener implements Listener {
 
         return false;
     }
+
+    //endregion
+
+
+    //region Block Formation
+
+    /*=================================================================================================
+                    -  Block Formation  -
+    =================================================================================================*/
+
+    @EventHandler
+    public void onBlockForm(BlockFormEvent e)
+    {
+        //get library
+        ItemLibrary lib = ItemManager.getLibrary(e.getBlock());
+
+        if(lib instanceof InteractorLibrary interactor)
+        {
+            interactor.naturalBlockBreak(e.getBlock(), true);
+        }
+    }
+
+    //endregion
+
 }

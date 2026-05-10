@@ -1,12 +1,5 @@
-package arnett.customItemsAPI.CustomItems.CustomBlockTypes;
+package arnett.customItemsAPI.ItemLibraries.CustomBlockTypes;
 
-import arnett.customItemsAPI.CustomItemsAPI;
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldguard.LocalPlayer;
-import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
-import com.sk89q.worldguard.protection.flags.Flags;
-import com.sk89q.worldguard.protection.regions.RegionQuery;
 import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -15,11 +8,8 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.Container;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.*;
-import org.bukkit.craftbukkit.block.impl.CraftSweetBerryBush;
 import org.bukkit.entity.Player;
 import org.joml.Quaternionf;
-
-import java.util.Set;
 
 public class PlacementHelper {
 

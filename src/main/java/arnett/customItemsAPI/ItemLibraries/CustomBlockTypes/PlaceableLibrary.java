@@ -1,7 +1,7 @@
-package arnett.customItemsAPI.CustomItems.CustomBlockTypes;
+package arnett.customItemsAPI.ItemLibraries.CustomBlockTypes;
 
-import arnett.customItemsAPI.CustomItems.ItemLibrary;
-import arnett.customItemsAPI.CustomItems.Directionality;
+import arnett.customItemsAPI.ItemLibraries.ItemLibrary;
+import arnett.customItemsAPI.ItemLibraries.Directionality;
 import arnett.customItemsAPI.CustomItemsAPI;
 import com.jeff_media.customblockdata.CustomBlockData;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
@@ -31,8 +31,15 @@ import java.util.UUID;
 
 public abstract class PlaceableLibrary extends ItemLibrary {
 
+    /**
+     * Namespaced used by CustomBlockData & Interactors to store the UUID of their display Entity
+     */
+    public static NamespacedKey DisplayLinkNamespace = new NamespacedKey("customitems", "linkeddisplay");
+
     public static NamespacedKey explosiveRangeNamespace = new NamespacedKey("customitems", "explosiverange");
+
     public static NamespacedKey placementDirectionNamespace = new NamespacedKey("customitems", "placementdirection");
+
 
     public abstract NamespacedKey getDisplayModelKey();
     public abstract PistonMoveReaction getPistonPushable();
