@@ -13,45 +13,25 @@ import org.joml.Quaternionf;
 
 public class PlacementHelper {
 
-    /**
-     * Gets the placement location and rotation from the placement information passed
-     * @param player The player who placed the block
-     * @param against the face the block was placed against
-     * @return
-     */
-    static Quaternionf placeNESW(Player player, BlockFace against)
-    {
-        return switch (against)
-        {
-            //base it off wall placement
-            case NORTH -> new Quaternionf().rotateY(0);
-            case EAST -> new Quaternionf().rotateY(-(float)Math.PI/2);
-            case SOUTH -> new Quaternionf().rotateY((float)Math.PI);
-            case WEST -> new Quaternionf().rotateY((float)Math.PI/2);
+    //region Up / Down
 
-            //placed on floor or roof
-            //base it off player direction
-            default -> switch (player.getFacing())
-            {
-                //opposite here since the player is facing opposite to the face they're placing on
-                case SOUTH -> new Quaternionf().rotateY((float)Math.PI);
-                case WEST -> new Quaternionf().rotateY((float)Math.PI/2);
-                case EAST -> new Quaternionf().rotateY(-(float)Math.PI/2);
-                default -> new Quaternionf().rotateY(0);
-            };
-        };
-    }
+    /*=================================================================================================
+                    -  Up / Down  -
+    =================================================================================================*/
 
     /**
-     * Gets the placement location and rotation from the placement information passed
+     * Gets the placement location and rotation from the placement information passed,
+     * This rotates the display to face Up or Down, like dripstone
      * @param player The player who placed the block
      * @param against the face the block was placed against
-     * @return
+     * @return Quaternion Rotation
      */
     static Quaternionf placeUD(Player player, BlockFace against)
     {
         return switch (against) {
+
             case UP -> new Quaternionf().rotateZ((float)Math.PI);
+
             case DOWN -> new Quaternionf();
 
             //placed on a wall so base of placed direction
@@ -63,6 +43,59 @@ public class PlacementHelper {
         };
     }
 
+    /**
+     * Gets a rotation from the placement information passed,
+     * This rotates the display to face up or down and rotates,
+     * it to be placed on the wall at it's -x rotation
+     * (so use NESW rotations to set that first)
+     * @param player The player who placed the block
+     * @param against the face the block was placed against
+     * @return Quaternion Rotation
+     */
+    static Quaternionf placeWallUD(Player player, BlockFace against)
+    {
+        return switch (against)
+        {
+            //if this is aginst the top flip it
+            case DOWN -> new Quaternionf().rotateZ((float)Math.PI);
+            //if this is aginst the floor do nothing
+            case UP -> new Quaternionf();
+
+
+            default  -> {
+                Quaternionf rotation = new Quaternionf();
+
+                //if the player is looking up, flip the model at this point
+                if(player.getPitch() > -15)
+                {
+                    rotation.rotateY((float)Math.PI);
+                }
+
+                //rotate it to be placed on the wall
+                yield rotation.rotateX(-(float)Math.PI/2);
+            }
+        };
+    }
+
+    //endregion
+
+
+    //region North / East / South / West
+
+    /*=================================================================================================
+                    -  NESW  -
+    =================================================================================================*/
+
+    /**
+     * Gets a rotation from the placement information passed,
+     * This rotates the display to face only NESW like a chest,
+     * but it requires a block in that direction, in CAPI this is
+     * only used to rotate the dispaly towards a wall,
+     * and then gets rotated elsewhere by PI/2 to be placed on the wall
+     * @param player The player who placed the block
+     * @param against the face the block was placed against
+     * @return Quaternion Rotation
+     */
     static Pair<Quaternionf, BlockFace> placeNESWBlock(Location newBlockSpot, Player player, BlockFace against)
     {
         BlockFace movedFace = against;
@@ -146,6 +179,99 @@ public class PlacementHelper {
         return Pair.of(rotation, movedFace);
     }
 
+
+    /**
+     * Gets a rotation from the placement information passed,
+     * This rotates the display to face only NESW like a chest
+     * @param player The player who placed the block
+     * @param against the face the block was placed against
+     * @return Quaternion Rotation
+     */
+    static Quaternionf placeNESW(Player player, BlockFace against)
+    {
+        return switch (against)
+        {
+            //base it off wall placement
+            case NORTH -> new Quaternionf().rotateY(0);
+            case EAST -> new Quaternionf().rotateY(-(float)Math.PI/2);
+            case SOUTH -> new Quaternionf().rotateY((float)Math.PI);
+            case WEST -> new Quaternionf().rotateY((float)Math.PI/2);
+
+            //placed on floor or roof
+            //base it off player direction
+            default -> switch (player.getFacing())
+            {
+                //opposite here since the player is facing opposite to the face they're placing on
+                case SOUTH -> new Quaternionf().rotateY((float)Math.PI);
+                case WEST -> new Quaternionf().rotateY((float)Math.PI/2);
+                case EAST -> new Quaternionf().rotateY(-(float)Math.PI/2);
+                default -> new Quaternionf().rotateY(0);
+            };
+        };
+    }
+
+    //endregion
+
+
+    //region Wall
+
+    /*=================================================================================================
+                    -  Wall  -
+    =================================================================================================*/
+
+
+    /**
+     * Gets a rotation from the placement information passed,
+     * This rotates the display to face up or down or
+     * on the wall at it's -x rotation
+     * @param against the face the block was placed against
+     * @return Quaternion Rotation
+     */
+    static Quaternionf placeWallD(BlockFace against)
+    {
+        return switch (against)
+        {
+            case DOWN -> new Quaternionf();
+            default  -> new Quaternionf().rotateX(-(float)Math.PI/2);
+        };
+    }
+
+    /**
+     * Gets a rotation from the placement information passed,
+     * This rotates the display to face up or down depending
+     * on player pitch, or does nothing if on Floor or Roof
+     * @param player The player who placed the block
+     * @param against the face the block was placed against
+     * @return Quaternion Rotation
+     */
+    static Quaternionf placeWallDirectional(Player player, BlockFace against)
+    {
+        if(BlockFace.UP == against || against == BlockFace.DOWN)
+            return new Quaternionf();
+
+        return player.getPitch() > -15 ?
+                //looking up
+                new Quaternionf().rotateX((float)Math.PI) :
+                //looking down
+                new Quaternionf();
+    }
+
+    //endregion
+
+
+    //region Find Block
+
+    /*=================================================================================================
+                    -  Find Block  -
+    =================================================================================================*/
+
+    /**
+     * Checks adjacent blocks to determine if they can be built on
+     * @param newBlockSpot Center Block to check
+     * @param failed Blockface which has already failed the check (leave NULL if unavailable)
+     * @param wallOnly Is this only placed on a wall or can it be placed on the floor or roof
+     * @return pair of Quaternion rotation (NESW rotation on Y) to a buildable blockface and the blockface itself
+     */
     static Pair<Quaternionf, BlockFace> findBlockRot(Location newBlockSpot, BlockFace failed, boolean wallOnly)
     {
         if(failed != BlockFace.NORTH && newBlockSpot.getBlock().getRelative(BlockFace.NORTH).isSolid())
@@ -181,82 +307,6 @@ public class PlacementHelper {
         return null;
     }
 
-    static Quaternionf placeWallUD(Player player, BlockFace against)
-    {
-        return switch (against)
-        {
-            case DOWN -> new Quaternionf().rotateZ((float)Math.PI);
-            case UP -> new Quaternionf();
-            default  -> {
-                Quaternionf rotation = new Quaternionf();
+    //endregion
 
-                //if the player is looking up, flip the model at this point
-                if(player.getPitch() > -15)
-                {
-                    rotation.rotateY((float)Math.PI);
-                }
-
-                yield rotation.rotateX(-(float)Math.PI/2);
-            }
-        };
-    }
-
-
-    static Quaternionf placeWallD(BlockFace against)
-    {
-        return switch (against)
-        {
-            case DOWN -> new Quaternionf();
-            default  -> new Quaternionf().rotateX(-(float)Math.PI/2);
-        };
-    }
-
-    static Quaternionf placeWallDirectional(Player player, BlockFace against)
-    {
-        if(BlockFace.UP == against || against == BlockFace.DOWN)
-            return new Quaternionf();
-
-        return player.getPitch() > -15 ?
-                //looking up
-                new Quaternionf().rotateX((float)Math.PI) :
-                //looking down
-                new Quaternionf();
-    }
-
-    public static boolean isUsable(Block block)
-    {
-        BlockData blockData = block.getBlockData();
-        Material type = block.getType();
-        return  block != null && (
-                blockData instanceof Switch ||
-                blockData instanceof Shelf ||
-                blockData instanceof Container ||
-                blockData instanceof Gate ||
-                blockData instanceof Door ||
-                blockData instanceof TrapDoor ||
-                blockData instanceof CommandBlock ||
-                blockData instanceof Sign ||
-                blockData instanceof WallHangingSign ||
-                blockData instanceof CopperGolemStatue ||
-                blockData instanceof StructureBlock ||
-                        (blockData instanceof Jukebox box && !box.hasRecord()) ||
-                        type == Material.CRAFTER ||
-                        type == Material.CRAFTING_TABLE ||
-                        type == Material.ANVIL ||
-                        type == Material.BEACON ||
-                        type == Material.LECTERN ||
-                        type == Material.TRAPPED_CHEST ||
-                        type == Material.ENCHANTING_TABLE ||
-                        type == Material.CAKE ||
-                        type == Material.NOTE_BLOCK ||
-                        type == Material.SWEET_BERRY_BUSH ||
-                        type == Material.GLOW_BERRIES ||
-                        type == Material.DRAGON_EGG ||
-                        type == Material.DECORATED_POT ||
-                        type == Material.DAYLIGHT_DETECTOR ||
-                        type == Material.REPEATER ||
-                        type == Material.COMPARATOR
-
-                );
-    }
 }

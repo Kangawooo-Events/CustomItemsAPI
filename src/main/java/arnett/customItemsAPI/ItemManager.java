@@ -200,10 +200,13 @@ public final class ItemManager {
      */
     static void unregisterRecipes(ItemLibrary item)
     {
-        for(NamespacedKey key : item.getRecipeKeys())
+        for(Recipe recipe : item.getRecipes())
         {
-            if(Bukkit.getRecipe(key) != null)
-                Bukkit.removeRecipe(key);
+            if(recipe instanceof Keyed keyed)
+            {
+                if(Bukkit.getRecipe(keyed.getKey()) != null)
+                    Bukkit.removeRecipe(keyed.getKey());
+            }
         }
     }
 

@@ -1,5 +1,6 @@
 package arnett.customItemsAPI.Listeners;
 
+import arnett.customItemsAPI.Helpers.BlockHelper;
 import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.Interactable.InteractorLibrary;
 import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.PlacementHelper;
 import arnett.customItemsAPI.CustomItemsAPI;
@@ -132,8 +133,7 @@ public class GeneralItemListener implements Listener {
         if(data == null)
             return;
 
-        if(CustomItemsAPI.worldGuardEnabled &&
-                !data.overrideWorldGuardInteract() &&
+        if(!data.overrideWorldGuardInteract() &&
                 !WorldGuardHelper.canWorldGuardInteract(e.getPlayer(), e.getClickedBlock().getLocation()))
         {
             e.setCancelled(true);
@@ -171,7 +171,7 @@ public class GeneralItemListener implements Listener {
             return;
 
 
-        if(!e.getPlayer().isSneaking() && PlacementHelper.isUsable(e.getClickedBlock()))
+        if(!e.getPlayer().isSneaking() && BlockHelper.isUsable(e.getClickedBlock()))
         {
             return;
         }
@@ -465,8 +465,7 @@ public class GeneralItemListener implements Listener {
             return;
         }
 
-        if(CustomItemsAPI.worldGuardEnabled &&
-                !lib.overrideWorldGuardInteract() &&
+        if(!lib.overrideWorldGuardInteract() &&
                 !WorldGuardHelper.canWorldGuardInteract(e.getPlayer(), e.getRightClicked().getLocation()))
         {
             e.setCancelled(true);
