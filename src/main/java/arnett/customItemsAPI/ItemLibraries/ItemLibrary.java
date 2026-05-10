@@ -49,6 +49,7 @@ public abstract class ItemLibrary {
      * @return The name of this item
      */
     public abstract String getName();
+
     /**
      * @return Namespace used to identify the specific item
      */

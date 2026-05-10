@@ -31,18 +31,82 @@ import java.util.UUID;
 
 public abstract class PlaceableLibrary extends ItemLibrary {
 
+    //region Abstract Properties
+
+    /*=================================================================================================
+                    -  Abstract Properties  -
+    =================================================================================================*/
+
+
+    /**
+     * @return Namespaced Key which leads to the block display's resource in a resource pack
+     */
+    public abstract NamespacedKey getDisplayModelKey();
+
+    /**
+     * @return The reaction this block has when pushed by a Piston
+     */
+    public abstract PistonMoveReaction getPistonPushable();
+
+    public abstract Directionality getDirectionality();
+
+
+    //endregion
+
+    //region Optional Properties
+
+    /*=================================================================================================
+                    -  Optional Properties  -
+    =================================================================================================*/
+
+    /**
+     * @return The material source for the particles which appear when broken (defaults to the base material)
+     */
+    public Material getBreakParticleMaterial()
+    {
+        return getBaseMaterial();
+    }
+
+    /**
+     * @return The sound played when breaking
+     * (defaults to the base mateial's break sound, or Stone break if it doesn't have one)
+     */
+    public Sound getBreakSound()
+    {
+        Material base = getBaseMaterial();
+
+        if(base.isBlock())
+            return getBaseMaterial().createBlockData().getSoundGroup().getBreakSound();
+
+        else
+            return Sound.BLOCK_STONE_BREAK;
+    }
+
+    //endregion
+
+    //region Static Properties
+
+    /*=================================================================================================
+                    -  Static Properties  -
+    =================================================================================================*/
+
     /**
      * Namespaced used by CustomBlockData & Interactors to store the UUID of their display Entity
      */
     public static NamespacedKey DisplayLinkNamespace = new NamespacedKey("customitems", "linkeddisplay");
 
+    /**
+     * Namespaced used by Explosive blocks to define their range
+     */
     public static NamespacedKey explosiveRangeNamespace = new NamespacedKey("customitems", "explosiverange");
 
+    /**
+     * Namespaced used by Directional blocks to define the direction they are placed
+     */
     public static NamespacedKey placementDirectionNamespace = new NamespacedKey("customitems", "placementdirection");
 
 
-    public abstract NamespacedKey getDisplayModelKey();
-    public abstract PistonMoveReaction getPistonPushable();
+    //endregion
 
     public NamespacedKey getWallDisplayModelKey()
     {
@@ -67,11 +131,6 @@ public abstract class PlaceableLibrary extends ItemLibrary {
         return new Vector(.5, .5, .5);
     }
 
-    public abstract Directionality getDirectionality();
-
-    public abstract Material getBreakParticleMaterial();
-
-    public abstract Sound getBreakSound();
 
 
     public UUID createDisplay(Location spot, BlockFace against)
