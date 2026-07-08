@@ -3,6 +3,7 @@ package arnett.customItemsAPI;
 import arnett.customItemsAPI.Listeners.GeneralItemListener;
 import cd.arnett.caddamands.cattamands.arguments.Cattarameter;
 import cd.arnett.caddamands.cattamands.cattamand.LiteralCattamand;
+import cd.arnett.caddamands.cattamands.interpretation.Catterpreter;
 import com.jeff_media.customblockdata.CustomBlockData;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;

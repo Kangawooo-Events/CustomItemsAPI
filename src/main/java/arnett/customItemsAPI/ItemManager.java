@@ -32,6 +32,8 @@ public final class ItemManager {
                     -  Variables  -
     =================================================================================================*/
 
+    public static boolean listenToInventoryMovement = false;
+
     static HashMap<NamespacedKey, ItemLibrary> items = new HashMap<>();
     static HashSet<Material> customItemMaterials = new HashSet<>();
 
@@ -75,12 +77,7 @@ public final class ItemManager {
      */
     public static void registerItem(JavaPlugin plugin, ItemLibrary item)
     {
-        //fill items map
-        addItems(List.of(item));
-
-        //set any recipes
-        registerRecipes(plugin, item);
-        registerEvents(plugin, item);
+        registerItems(plugin, List.of(item));
     }
 
     /**
@@ -97,6 +94,11 @@ public final class ItemManager {
             //set any recipes
             registerRecipes(plugin, item);
             registerEvents(plugin, item);
+
+            if (!listenToInventoryMovement && item.trackInventoryMovements())
+            {
+                listenToInventoryMovement = true;
+            }
         });
     }
 

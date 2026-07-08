@@ -2,7 +2,6 @@ package arnett.customItemsAPI.Listeners;
 
 import arnett.customItemsAPI.Helpers.BlockHelper;
 import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.Interactable.InteractorLibrary;
-import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.PlacementHelper;
 import arnett.customItemsAPI.CustomItemsAPI;
 import arnett.customItemsAPI.Helpers.WorldGuardHelper;
 import arnett.customItemsAPI.ItemManager;
@@ -10,7 +9,9 @@ import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.BlockState.BlockStat
 import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.PlaceableLibrary;
 import arnett.customItemsAPI.ItemLibraries.ItemLibrary;
 import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
+import io.papermc.paper.event.player.PlayerInventorySlotChangeEvent;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
+import org.bukkit.Bukkit;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
@@ -24,15 +25,18 @@ import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
 
 public class GeneralItemListener implements Listener {
 
@@ -696,6 +700,130 @@ public class GeneralItemListener implements Listener {
             interactor.naturalBlockBreak(e.getBlock(), true);
         }
     }
+
+    //endregion
+
+
+    //region Inventory Movements
+
+    /*=================================================================================================
+                       -  Inventory Movements  -
+    =================================================================================================*/
+
+    HashMap<UUID, ItemStack[]> inventoryContentCounter = new HashMap<>();
+
+    void prepForInventorySync(Player player)
+    {
+        if(!ItemManager.listenToInventoryMovement)
+            return;
+
+        UUID playerId = player.getUniqueId();
+        inventoryContentCounter.put(playerId, player.getInventory().getContents());
+
+        Bukkit.getScheduler().runTaskLater(CustomItemsAPI.singleton, (task) -> {
+            inventoryContentCounter.remove(playerId);
+        }, 1);
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent e)
+    {
+        prepForInventorySync(e.getPlayer());
+    }
+
+    @EventHandler
+    public void onPlayerOpenInventory(InventoryOpenEvent e)
+    {
+        if (e.getPlayer() instanceof Player player) {
+            prepForInventorySync(player);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerInventorySlotChange(PlayerInventorySlotChangeEvent e)
+    {
+        //only run this expensive listener if there is something we need to listen for
+        if(!ItemManager.listenToInventoryMovement)
+            return;
+
+        //skip this if it is a syncing thing (don't ask)
+        ItemStack[] existingInventoryData = inventoryContentCounter.get(e.getPlayer().getUniqueId());
+
+        if(existingInventoryData != null && e.getSlot() < existingInventoryData.length)
+        {
+            ItemStack existingItem = existingInventoryData[e.getSlot()];
+
+            System.out.println(existingItem);
+
+            if(existingItem != null && existingItem.isSimilar(e.getNewItemStack()))
+            {
+                return;
+            }
+        }
+
+        ItemStack newStack = e.getNewItemStack();
+        ItemStack oldStack = e.getOldItemStack();
+
+        ItemLibrary newLib = ItemManager.getLibrary(newStack);
+        ItemLibrary oldLib = ItemManager.getLibrary(oldStack);
+
+        boolean newIsTracked = newLib != null && newLib.trackInventoryMovements();
+        boolean oldIsTracked = oldLib != null && oldLib.trackInventoryMovements();
+
+        //if both of these are the same custom items make sure they're not stacking
+        if(newIsTracked && oldIsTracked && newStack.isSimilar(oldStack))
+        {
+            int difference = newStack.getAmount() - oldStack.getAmount();
+
+            if(difference > 0)
+            {
+                newLib.onItemEnterPlayerInventorySlot(e);
+            }
+            else
+            {
+                oldLib.onItemExitPlayerInventorySlot(e);
+            }
+        }
+        else
+        {
+            if(newIsTracked)
+            {
+                newLib.onItemEnterPlayerInventorySlot(e);
+            }
+            if(oldIsTracked)
+            {
+                oldLib.onItemExitPlayerInventorySlot(e);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent e)
+    {
+        ItemLibrary lib = ItemManager.getLibrary(e.getItemDrop().getItemStack());
+
+        if(lib == null)
+            return;
+
+        lib.onPlayerDropItem(e);
+    }
+
+
+    @EventHandler
+    public void onPlayerPickupItem(EntityPickupItemEvent e)
+    {
+        ItemLibrary lib = ItemManager.getLibrary(e.getItem().getItemStack());
+
+        if(lib == null)
+            return;
+
+        if(e.getEntity() instanceof Player player)
+            lib.onPlayerPickupItem(e, player);
+
+        lib.onEntityPickupItem(e);
+    }
+
+
 
     //endregion
 

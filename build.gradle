@@ -18,7 +18,12 @@ repositories {
         url = "https://repo.papermc.io/repository/maven-public/"
     }
     maven {
+        name = "Caddamands"
         url = uri("https://maven.pkg.github.com/kangawooo-events/caddamands")
+        credentials {
+            username = project.findProperty("github.user") as String ?: System.getenv("github.user")
+            password = project.findProperty("github.token") as String ?: System.getenv("github.token")
+        }
     }
     maven { url "https://maven.enginehub.org/repo/" }
 }
@@ -28,7 +33,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.13")
     implementation 'com.jeff-media:custom-block-data:2.2.4'
-    compileOnly("cd.arnett:caddamands:3.A.1")
+    compileOnly("cd.arnett:caddamands:3.A.3")
 }
 
 tasks {
@@ -74,7 +79,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'cd.arnett'
             artifactId = 'customitemsapi'
-            version = '1.A.0'
+            version = '2.A.1'
             from components.java
         }
     }

@@ -7,10 +7,14 @@ import cd.arnett.caddamands.cattamands.cattamand.LiteralCattamand;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.event.player.PlayerInventorySlotChangeEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
@@ -18,7 +22,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -153,6 +156,15 @@ public abstract class ItemLibrary {
         return false;
     }
 
+    /**
+     * Defines whether inventory movement related costly events like
+     * PlayerInventorySlotChangeEvent are tracked for this item to save on performance
+     * @return Override to TRUE to track these events
+     */
+    public boolean trackInventoryMovements()
+    {
+        return false;
+    }
     //endregion
 
 
@@ -166,22 +178,11 @@ public abstract class ItemLibrary {
      * @return A new ItemStack of this Libraries item
      */
     public ItemStack getItem() {
+
         //create item stack of config set material
         ItemStack item = ItemStack.of(getBaseMaterial());
 
-        //change the item model
-        ItemMeta meta = item.getItemMeta();
-
-        meta.setItemModel(getItemModelKey());
-
-        meta.getPersistentDataContainer().set(getIdentifier(), PersistentDataType.BOOLEAN, true);
-
-        //tag it as a custom item with a namespace which can be easily accessed later to get the specific item type
-        meta.getPersistentDataContainer().set(customItemTag, PersistentDataType.STRING, getIdentifier().toString());
-
-        meta.itemName(MiniMessage.miniMessage().deserialize(getDisplayName()));
-
-        item.setItemMeta(meta);
+        item.setItemMeta(getModifiedItemMeta(item));
 
         return item;
     }
@@ -195,6 +196,31 @@ public abstract class ItemLibrary {
         ItemStack stack = getItem();
         stack.setAmount(count);
         return stack;
+    }
+
+
+    /**
+     * Modifies the item meta of the item passed, usually used just to tag it and set its model but is also
+     * useful to override when adding tags so that a second item meta isn't created (since that is slower).
+     * This DOES NOT set the item meta back on the ItemStack
+     * @param item The base item to get the itemMeta from
+     * @return the modified Item Meta
+     */
+    public ItemMeta getModifiedItemMeta(ItemStack item)
+    {
+        //change the item model
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setItemModel(getItemModelKey());
+
+        meta.getPersistentDataContainer().set(getIdentifier(), PersistentDataType.BOOLEAN, true);
+
+        //tag it as a custom item with a namespace which can be easily accessed later to get the specific item type
+        meta.getPersistentDataContainer().set(customItemTag, PersistentDataType.STRING, getIdentifier().toString());
+
+        meta.itemName(MiniMessage.miniMessage().deserialize(getDisplayName()));
+
+        return meta;
     }
 
     //endregion
@@ -295,7 +321,6 @@ public abstract class ItemLibrary {
 
     /**
      * Called whenever the Item is used (Right/Left click with item in hand)
-     * @param e PlayerInteractEvent for this interaction
      */
     public void onItemUsed(PlayerInteractEvent e)
     {
@@ -304,12 +329,42 @@ public abstract class ItemLibrary {
 
     /**
      * Called whenever the Item is used (Right click with item in hand)
-     * @param e PlayerInteractEntityEvent for this interaction
      */
     public void onItemUsedOnEntity(PlayerInteractEntityEvent e)
     {
         return;
     }
+
+    /**
+     * Called whenever the Item is picked up by a player specifically (also calls onEntityPickupItem)
+     */
+    public void onPlayerPickupItem(EntityPickupItemEvent e, Player player){return;}
+
+    /**
+     * Called whenever the Item is picked up by a player
+     */
+    public void onEntityPickupItem(EntityPickupItemEvent e){return;}
+
+    /**
+     * Called whenever the Item is dropped by a player
+     */
+    public void onPlayerDropItem(PlayerDropItemEvent e){return;}
+
+    /**
+     * Called whenever the Item is added to a player's inventory slot (including movement between them).
+     * To be used you MUST OVERRIDE trackInventoryMovements() and return TRUE,
+     * It is like this to save on performance since this is a very common event
+     */
+    public void onItemEnterPlayerInventorySlot(PlayerInventorySlotChangeEvent e){return;}
+
+    /**
+     * Called whenever the Item is removed from a player's inventory slot (including movement between them).
+     * To be used you MUST OVERRIDE trackInventoryMovements() and return TRUE,
+     * It is like this to save on performance since this is a very common event
+     */
+    public void onItemExitPlayerInventorySlot(PlayerInventorySlotChangeEvent e){return;}
+
+
 
     //endregion
 
