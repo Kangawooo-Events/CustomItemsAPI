@@ -3,6 +3,7 @@ package arnett.customItemsAPI.ItemLibraries.CustomBlockTypes;
 import arnett.customItemsAPI.ItemLibraries.ItemLibrary;
 import arnett.customItemsAPI.ItemLibraries.Directionality;
 import arnett.customItemsAPI.CustomItemsAPI;
+import arnett.customItemsAPI.ItemManager;
 import com.jeff_media.customblockdata.CustomBlockData;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import net.kyori.adventure.text.Component;
@@ -13,6 +14,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.PistonMoveReaction;
 import org.bukkit.entity.*;
+import org.bukkit.event.Cancellable;
 import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -21,6 +23,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
@@ -315,54 +318,24 @@ public abstract class PlaceableLibrary extends ItemLibrary {
         return new PlacementData(placedSpot, rotation, against);
     }
 
-    public PlacementData getDisplaySpot(Location spot, PlayerInteractEvent e)
-    {
-        return getDisplaySpot(spot, e.getPlayer(), e.getBlockFace());
-    }
-
-    public PlacementData getDisplaySpot(Location spot, BlockPlaceEvent e)
-    {
-        return getDisplaySpot(spot, e.getPlayer(), e.getBlockPlaced().getFace(e.getBlockAgainst()));
-    }
 
     /**
      *
-     * @param spot Where to place the block
-     * @param template Itemstack required to create place event and used in overriding for blocks that need more data from the place item
-     * @param placer who to get credit for placing the block, required to fire BlockPlaceEvent
-     *               Places the block against the block down from it
+     * @param blockReplaced The block which was replaced with the placed block
+     * @param faceClicked Face of the block which was clicked in the process of placing this
+     * @param itemPlaced The item which placed
+     * @param placementEvent
+     * @return
      */
-    public void placeBlock(Location spot, ItemStack template, Player placer)
-    {
-        //this is used to place a block somewhere in the world through code
-        //the template is only there for usage with blocks that need custom data from an itemstack
-        //but for default this just places the block
+    public abstract boolean tryPlace(Block blockReplaced, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent);
 
-        Block placeAtBlock = spot.getBlock();
-        BlockState previousState = placeAtBlock.getState();
-        Block placedAgainst = placeAtBlock.getRelative(BlockFace.DOWN);
-
-        BlockPlaceEvent placeEvent = new BlockPlaceEvent(
-                placeAtBlock,
-                previousState,
-                placedAgainst,
-                template,
-                placer,
-                true,
-                EquipmentSlot.HAND
-        );
-
-        //call the place event
-        //this does the plugin code stuff
-        Bukkit.getPluginManager().callEvent(placeEvent);
-
-        //if the event was NOT canceled
-        if(!placeEvent.isCancelled())
-        {
-            //set the block type
-            placeAtBlock.setType(getBaseMaterial());
-        }
-    }
+    /**
+     * Called whenever a placement of this block is successful
+     * @param blockReplaced The block which was replaced with the placed block
+     * @param itemPlaced The item which placed
+     * @param placer Player placing the block
+     */
+    public abstract void onPlaced(Block blockReplaced, ItemStack itemPlaced, Player placer);
 
     @Override
     public String toString()
@@ -458,6 +431,5 @@ public abstract class PlaceableLibrary extends ItemLibrary {
 
         return BlockFace.values()[face];
     }
-
 
 }

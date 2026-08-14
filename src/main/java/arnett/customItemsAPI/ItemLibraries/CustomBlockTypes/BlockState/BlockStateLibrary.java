@@ -6,10 +6,13 @@ import arnett.customItemsAPI.CustomItemsAPI;
 import com.jeff_media.customblockdata.CustomBlockData;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.ItemDisplay;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
@@ -45,20 +48,30 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
         return new CustomBlockData(block, CustomItemsAPI.singleton).has(getIdentifier());
     }
 
-    public void onBlockPlaced(BlockPlaceEvent e)
+    public final void onBlockPlaced(BlockPlaceEvent e)
     {
         if(e.isCancelled())
             return;
 
+        Block placedBlock = e.getBlockPlaced();
+        Block blockAgainst = e.getBlockAgainst();
+
+        tryPlace(placedBlock, blockAgainst.getFace(placedBlock), e.getItemInHand(), e.getPlayer(), e);
+    }
+
+    @Override
+    public boolean tryPlace(Block toBeReplaced, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent) {
+
+
         //the item was placed
         //replace the actual block with the kind we want
-        e.getBlock().setBlockData(getOverrideBlockData());
+        toBeReplaced.setBlockData(getOverrideBlockData());
 
         //spawn the item's Display
-        Location placeSpot = e.getBlock().getLocation();
+        Location placeSpot = toBeReplaced.getLocation();
 
         //create the block's pdc
-        PersistentDataContainer customBlockData = new CustomBlockData(e.getBlock(), CustomItemsAPI.singleton);
+        PersistentDataContainer customBlockData = new CustomBlockData(toBeReplaced, CustomItemsAPI.singleton);
 
         //set the generic tag to tell it is a custom block
         customBlockData.set(ItemLibrary.customItemTag, PersistentDataType.STRING, getIdentifier().toString());
@@ -66,25 +79,28 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
         //set this as the item (boolean and true don't really matter here we just check that it has this later)
         customBlockData.set(getIdentifier(), PersistentDataType.BOOLEAN, true);
 
-        var placementInfo = getDisplaySpot(placeSpot, e);
+        var placementInfo = getDisplaySpot(placeSpot, placer, faceClicked);
 
         //set the placement direction
         customBlockData.set(placementDirectionNamespace, PersistentDataType.INTEGER, placementInfo.faceOn().ordinal());
 
         UUID id = createDisplay(placementInfo);
 
+        //if there is no display do nothing
         if(id == null)
         {
-            e.setCancelled(true);
-            return;
+            placementEvent.setCancelled(true);
+            return false;
         }
 
         //Link this block to the display
-        new CustomBlockData(e.getBlock(), CustomItemsAPI.singleton).set(
+        new CustomBlockData(toBeReplaced, CustomItemsAPI.singleton).set(
                 PlaceableLibrary.DisplayLinkNamespace,
                 PersistentDataType.STRING,
                 id.toString()
         );
+
+        return true;
     }
 
     public void onBlockBroken(BlockBreakEvent e)

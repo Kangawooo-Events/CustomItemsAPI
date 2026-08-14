@@ -10,6 +10,7 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.*;
+import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPhysicsEvent;
@@ -17,6 +18,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -67,45 +69,57 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
         return interaction.getPersistentDataContainer().has(getIdentifier());
     }
 
-    public Interaction onItemPlacementInteraction(PlayerInteractEvent e, Event.Result canUseItem)
-    {
-        if(canUseItem == Event.Result.DENY)
-            return null;
+    public final void onItemPlacementInteraction(PlayerInteractEvent e, Event.Result canUseItem) {
+        if (canUseItem == Event.Result.DENY)
+            return;
 
-        //the item was placed
+        //cancel the interaction event since we handle it here
+        e.setCancelled(true);
+
+        //gets the block which is being set
         Block placeAtBlock = e.getClickedBlock().isReplaceable() ?
                 e.getClickedBlock() :
                 e.getClickedBlock().getRelative(e.getBlockFace());
 
-        Location placeSpot = placeAtBlock.getLocation();
+        //try to place
+        if (tryPlace(placeAtBlock, e.getBlockFace(), e.getItem(), e.getPlayer(), e))
+        {
+            //if placement was successful then swing the hand
+            e.getPlayer().swingHand(e.getHand());
+        }
+    }
+
+    @Override
+    public boolean tryPlace(Block blockReplaced, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent) {
+
+        Location placeSpot = blockReplaced.getLocation();
 
         //check the block for nearby entities or blocks
-        if((placeAtBlock.getType() != Material.AIR &&
-                !placeAtBlock.isReplaceable()) ||
-                placeSpot.getWorld().getNearbyEntities(BoundingBox.of(placeAtBlock)).stream().anyMatch(
+        if((blockReplaced.getType() != Material.AIR &&
+                !blockReplaced.isReplaceable()) ||
+                placeSpot.getWorld().getNearbyEntities(BoundingBox.of(blockReplaced)).stream().anyMatch(
                         entity -> {
                             return entity instanceof Interaction interaction &&
-                                            ItemManager.getLibrary(interaction) != null;
+                                    ItemManager.getLibrary(interaction) != null;
                         }
                 )
         )
         {
-            e.setCancelled(true);
-            return null;
-        }
-
-        //get the display spot now since we're going to need it to create the hitbox
-        PlacementData displayInfo = getDisplaySpot(placeSpot, e);
-
-        if(displayInfo == null)
-        {
-            e.setCancelled(true);
-            return null;
+            return false;
         }
 
         //remove the block if it was replaced
-        placeAtBlock.breakNaturally();
+        blockReplaced.breakNaturally();
 
+
+        //get the display spot now since we're going to need it to create the hitbox
+        PlacementData displayInfo = getDisplaySpot(placeSpot, placer, faceClicked);
+
+        if(displayInfo == null)
+        {
+            placementEvent.setCancelled(true);
+            return false;
+        }
 
         boolean isOnWall = switch (getDirectionality())
         {
@@ -151,7 +165,7 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
         hitboxCenter.add(offset);
 
         //create the hitbox
-        Interaction interaction = e.getClickedBlock().getWorld().spawn(
+        Interaction interaction = blockReplaced.getWorld().spawn(
                 hitboxCenter, Interaction.class
         );
 
@@ -178,7 +192,7 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
         //tag the block's pdc as a custom item
 
         //create the block's pdc
-        PersistentDataContainer customBlockData = new CustomBlockData(placeAtBlock, CustomItemsAPI.singleton);
+        PersistentDataContainer customBlockData = new CustomBlockData(blockReplaced, CustomItemsAPI.singleton);
 
         //set the generic tag to tell it is a custom block
         customBlockData.set(ItemLibrary.customItemTag, PersistentDataType.STRING, getIdentifier().toString());
@@ -199,25 +213,20 @@ public abstract class InteractorLibrary extends PlaceableLibrary {
                 displayInfo.faceOn().ordinal()
         );
 
-        //don't have the player actually place a block here or interact with it since we are placing a block now
-        e.setUseItemInHand(Event.Result.DENY);
-        e.setUseInteractedBlock(Event.Result.DENY);
-
         //remove the item if not in creative
-        if(e.getPlayer().getGameMode() != GameMode.CREATIVE)
-            e.getItem().setAmount(e.getItem().getAmount()-1);
-
-        //play the swing animation to emulate placing
-        e.getPlayer().swingHand(e.getHand());
+        if(placer.getGameMode() != GameMode.CREATIVE)
+            itemPlaced.setAmount(itemPlaced.getAmount()-1);
 
         Sound placeSound = getPlacementSound();
 
         if(placeSound != null)
             placeSpot.getWorld().playSound(placeSpot, placeSound, 1, 1);
 
-        return interaction;
-    }
+        //call anything set to happen when the block is placed
+        onPlaced(blockReplaced, itemPlaced, placer);
 
+        return true;
+    }
 
     public void onInteractorBroken(EntityDamageByEntityEvent e, Interaction interaction)
     {
