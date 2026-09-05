@@ -141,7 +141,7 @@ public final class ItemManager {
         //register the give commands of the items
         new LiteralCattamand.Builder("cigive")
                 .argument(List.of(
-                        Cattarameter.of(
+                        new Cattarameter(
                                 "receiver",
                                 ArgumentTypes.players()
                         )

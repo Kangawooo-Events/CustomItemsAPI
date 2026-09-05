@@ -105,13 +105,14 @@ public abstract class ItemLibrary {
                 getName(),
                 "op",
                 List.of(
-                        Cattarameter.of(
+                        new Cattarameter(
                                 "count",
                                 IntegerArgumentType.integer(
                                         0,
                                         getBaseMaterial().getMaxStackSize()
                                 ),
-                                (Command<CommandSourceStack>) (ctx) -> {
+                                null,
+                                (ctx) -> {
                                     int count = ctx.getArgument("count", int.class);
 
                                     //get the player(s) to give to
