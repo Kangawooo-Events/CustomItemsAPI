@@ -1,0 +1,5 @@
+jdk:
+  - openjdk21
+
+before_install:
+  - export GRADLE_OPTS="-Xmx2048m -Dorg.gradle.daemon=false"
