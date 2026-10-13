@@ -196,6 +196,21 @@ public class GeneralItemListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onEntityAttackEntity(EntityDamageByEntityEvent e)
+    {
+        if(!(e.getDamager() instanceof LivingEntity living))
+            return;
+
+        var equipment = living.getEquipment();
+        if (equipment == null)
+            return;
+
+        ItemLibrary lib = ItemManager.getLibrary(equipment.getItemInMainHand());
+
+        lib.onItemUsedInAttack(e);
+    }
+
     //endregion
 
 

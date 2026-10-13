@@ -6,13 +6,13 @@ import cd.arnett.caddamands.cattamands.cattamand.Cattamand;
 import cd.arnett.caddamands.cattamands.cattamand.LiteralCattamand;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.event.player.PlayerInventorySlotChangeEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -335,6 +335,12 @@ public abstract class ItemLibrary {
     {
         return;
     }
+
+
+    /**
+     * Called whenever the Item is used to attack another entity
+     */
+    public void onItemUsedInAttack(EntityDamageByEntityEvent e) {return;}
 
     /**
      * Called whenever the Item is picked up by a player specifically (also calls onEntityPickupItem)
