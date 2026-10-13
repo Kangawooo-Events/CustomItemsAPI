@@ -62,7 +62,6 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
     @Override
     public boolean tryPlace(Block toBeReplaced, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent) {
 
-
         //the item was placed
         //replace the actual block with the kind we want
         toBeReplaced.setBlockData(getOverrideBlockData());

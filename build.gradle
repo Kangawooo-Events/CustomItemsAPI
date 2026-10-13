@@ -26,7 +26,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.13")
     implementation 'com.jeff-media:custom-block-data:2.2.4'
-    compileOnly 'com.github.Kangawooo-Events:Caddamands:ca561e3b99'
+    compileOnly("com.github.Kangawooo-Events:Caddamands:v3.A.10")
 }
 
 tasks {

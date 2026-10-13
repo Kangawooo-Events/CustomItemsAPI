@@ -7,5 +7,4 @@ description: Enables the easy creation of new worlds and some extra features
 
 soft-depend: [WorldGuard]
 
-# load this plugin last
 load: POSTWORLD
