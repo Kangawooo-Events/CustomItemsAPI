@@ -340,7 +340,7 @@ public abstract class ItemLibrary {
     /**
      * Called whenever the Item is used to attack another entity
      */
-    public void onItemUsedInAttack(EntityDamageByEntityEvent e) {return;}
+    public void onItemUsedInAttack(EntityDamageByEntityEvent e, ItemStack item) {return;}
 
     /**
      * Called whenever the Item is picked up by a player specifically (also calls onEntityPickupItem)

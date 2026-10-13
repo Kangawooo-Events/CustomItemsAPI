@@ -206,9 +206,11 @@ public class GeneralItemListener implements Listener {
         if (equipment == null)
             return;
 
-        ItemLibrary lib = ItemManager.getLibrary(equipment.getItemInMainHand());
+        var item = equipment.getItemInMainHand();
+        ItemLibrary lib = ItemManager.getLibrary(item);
 
-        lib.onItemUsedInAttack(e);
+        if(lib != null)
+            lib.onItemUsedInAttack(e, item);
     }
 
     //endregion
