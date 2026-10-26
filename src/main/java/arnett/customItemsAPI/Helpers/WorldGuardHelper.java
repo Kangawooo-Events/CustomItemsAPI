@@ -19,6 +19,20 @@ public class WorldGuardHelper {
      * @param spot Spot to check
      * @return Whether they can interact or not in that spot
      */
+    public static boolean canWorldGuardBuild(Player player, Location spot)
+    {
+        if(!CustomItemsAPI.worldGuardEnabled)
+            return true;
+
+        return WorldGuardHook.canWorldGuardPlace(player, spot);
+    }
+
+    /**
+     * Checks whether World guard permits the player to interact in this spot (Does NOT use Worldguard API)
+     * @param player Player whose perms to check
+     * @param spot Spot to check
+     * @return Whether they can interact or not in that spot
+     */
     public static boolean canWorldGuardInteract(Player player, Location spot)
     {
         if(!CustomItemsAPI.worldGuardEnabled)

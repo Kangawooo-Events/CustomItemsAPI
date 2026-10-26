@@ -1,7 +1,7 @@
-package arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.BlockState;
+package arnett.customItemsAPI.items.modules.placeable.BlockState;
 
-import arnett.customItemsAPI.ItemLibraries.CustomBlockTypes.PlaceableLibrary;
-import arnett.customItemsAPI.ItemLibraries.ItemLibrary;
+import arnett.customItemsAPI.items.modules.placeable.BasePlaceableItemModule;
+import arnett.customItemsAPI.items.ItemLibrary;
 import arnett.customItemsAPI.CustomItemsAPI;
 import com.jeff_media.customblockdata.CustomBlockData;
 import org.bukkit.*;
@@ -26,16 +26,14 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.UUID;
 
-public abstract class BlockStateLibrary extends PlaceableLibrary {
+public interface PlaceableBlockStateItemModule extends BasePlaceableItemModule {
 
-    protected abstract BlockData getOverrideBlockData();
+    BlockData overridedBlockData();
 
-    public abstract boolean getExplosionResistant();
-
-    public boolean isItem(Block block)
+    default boolean isItem(Block block)
     {
         //start with general material check
-        if(!block.getType().equals(getOverrideBlockData().getMaterial()))
+        if(!block.getType().equals(overridedBlockData().getMaterial()))
             return false;
 
         //then check if the block has a pdc
@@ -45,10 +43,10 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
         }
 
         //only then check if it has the specific namespace
-        return new CustomBlockData(block, CustomItemsAPI.singleton).has(getIdentifier());
+        return new CustomBlockData(block, CustomItemsAPI.singleton).has(getLibrary().identifier());
     }
 
-    public final void onBlockPlaced(BlockPlaceEvent e)
+    default void onBlockPlaced(BlockPlaceEvent e)
     {
         if(e.isCancelled())
             return;
@@ -60,11 +58,13 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
     }
 
     @Override
-    public boolean tryPlace(Block toBeReplaced, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent) {
+    default boolean tryPlace(Block toBeReplaced, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent) {
+
+        var library = getLibrary();
 
         //the item was placed
         //replace the actual block with the kind we want
-        toBeReplaced.setBlockData(getOverrideBlockData());
+        toBeReplaced.setBlockData(overridedBlockData());
 
         //spawn the item's Display
         Location placeSpot = toBeReplaced.getLocation();
@@ -73,36 +73,20 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
         PersistentDataContainer customBlockData = new CustomBlockData(toBeReplaced, CustomItemsAPI.singleton);
 
         //set the generic tag to tell it is a custom block
-        customBlockData.set(ItemLibrary.customItemTag, PersistentDataType.STRING, getIdentifier().toString());
+        customBlockData.set(ItemLibrary.customItemTag, PersistentDataType.STRING, library.identifier().toString());
 
         //set this as the item (boolean and true don't really matter here we just check that it has this later)
-        customBlockData.set(getIdentifier(), PersistentDataType.BOOLEAN, true);
+        customBlockData.set(library.identifier(), PersistentDataType.BOOLEAN, true);
 
-        var placementInfo = getDisplaySpot(placeSpot, placer, faceClicked);
+        var placementInfo = getPlacementData(placeSpot, placer, faceClicked);
 
         //set the placement direction
         customBlockData.set(placementDirectionNamespace, PersistentDataType.INTEGER, placementInfo.faceOn().ordinal());
 
-        UUID id = createDisplay(placementInfo);
-
-        //if there is no display do nothing
-        if(id == null)
-        {
-            placementEvent.setCancelled(true);
-            return false;
-        }
-
-        //Link this block to the display
-        new CustomBlockData(toBeReplaced, CustomItemsAPI.singleton).set(
-                PlaceableLibrary.DisplayLinkNamespace,
-                PersistentDataType.STRING,
-                id.toString()
-        );
-
         return true;
     }
 
-    public void onBlockBroken(BlockBreakEvent e)
+    default void onBlockBroken(BlockBreakEvent e)
     {
         if(e.isCancelled())
             return;
@@ -115,17 +99,17 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
         e.setCancelled(true);
     }
 
-    public void onBlockInteracted(PlayerInteractEvent e, Event.Result canUseBlock)
+    default void onBlockInteracted(PlayerInteractEvent e, Event.Result canUseBlock)
     {
         return;
     }
 
-    public ItemDisplay getDisplayEntity(Block block)
+    default ItemDisplay getDisplayEntity(Block block)
     {
         return (ItemDisplay) Bukkit.getEntity(getDisplayEntityID(block));
     }
 
-    public UUID getDisplayEntityID(Block block)
+    default UUID getDisplayEntityID(Block block)
     {
         if(!CustomBlockData.hasCustomBlockData(block, CustomItemsAPI.singleton))
         {
@@ -134,7 +118,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
 
         return UUID.fromString(
                 new CustomBlockData(block, CustomItemsAPI.singleton)
-                        .get(PlaceableLibrary.DisplayLinkNamespace, PersistentDataType.STRING)
+                        .get(BasePlaceableItemModule.DisplayLinkNamespace, PersistentDataType.STRING)
         );
     }
 
@@ -145,7 +129,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
      * @return whether to remove it from the explosion
      * list, true = resist, false = explode
      */
-    public boolean onEntityExplode(EntityExplodeEvent e, Block customBlock)
+    default boolean onEntityExplode(EntityExplodeEvent e, Block customBlock)
     {
         onExplode(customBlock);
         return true;
@@ -160,7 +144,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
      * Always returns true by default because if it does get exploded the block breakage is handled
      * in the onExplode function to drop the custom item.
      */
-    public boolean onBlockExplode(BlockExplodeEvent e, Block customBlock)
+    default boolean onBlockExplode(BlockExplodeEvent e, Block customBlock)
     {
         onExplode(customBlock);
         return true;
@@ -170,9 +154,9 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
      * Called by default when an explosion reaches this block.
      * Calls the naturalBreakBlock function if we are not explosion resistant
      */
-    public void onExplode(Block explodedBlock)
+    default void onExplode(Block explodedBlock)
     {
-        if(!getExplosionResistant())
+        if(!explosionResistant())
         {
             //break it ourselves
             naturalBlockBreak(explodedBlock, true);
@@ -184,13 +168,13 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
      * @param brokenBlock the custom block being broken
      */
     @Override
-    public void naturalBlockBreak(Block brokenBlock, boolean dropItem)
+    default void naturalBlockBreak(Block brokenBlock, boolean dropItem)
     {
         if(isItem(brokenBlock))
             //first delete the block
             deleteBlock(brokenBlock);
 
-        Location offsetLocation = brokenBlock.getLocation().clone().add(getDisplayModelOffset());
+        Location offsetLocation = brokenBlock.getLocation().clone().add(displayModelOffset());
 
         //show particles
         offsetLocation.getWorld().spawnParticle(
@@ -201,13 +185,13 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
                 0.3,
                 0.3,
                 0.1f,
-                getBreakParticleMaterial().createBlockData()
+                breakParticleMaterial().createBlockData()
         );
 
         //play the break sound
         offsetLocation.getWorld().playSound(
                 offsetLocation,
-                getBreakSound(),
+                breakSound(),
                 1f,
                 1f
         );
@@ -217,26 +201,10 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
 
         //then drop the block item if set to
         if(dropItem)
-            dropPlaceableItem(brokenBlock);
+            dropPlaceableItem(offsetLocation);
     }
 
-    private void dropPlaceableItem(Block breakBlock) {
-        //drop the item of the base material and call on BlockDrop item for consistency
-        //because this is what it would normally look like if the player broke a block
-        breakBlock.getWorld().dropItemNaturally(
-                breakBlock.getLocation().add(.5f, .5f, .5f),
-                new ItemStack(getBaseMaterial()),
-                item -> onPlaceableDropItem(breakBlock, item)
-        );
-    }
-
-    public void onPlaceableDropItem(Block brokenBlock, Item baseMaterialItem)
-    {
-        //call the base function
-        onPlaceableDropItem(baseMaterialItem);
-    }
-
-    public void deleteBlock(Block block)
+    default void deleteBlock(Block block)
     {
         CustomBlockData cbd = new CustomBlockData(block, CustomItemsAPI.singleton);
         removeLink(cbd);
@@ -244,10 +212,10 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
         block.setType(Material.AIR);
     }
 
-    public static void removeLink(CustomBlockData blockData)
+    default void removeLink(CustomBlockData blockData)
     {
         //get the attached entity
-        String id = blockData.get(PlaceableLibrary.DisplayLinkNamespace, PersistentDataType.STRING);
+        String id = blockData.get(BasePlaceableItemModule.DisplayLinkNamespace, PersistentDataType.STRING);
 
         //get the id
         UUID entityId = UUID.fromString(id);
@@ -261,7 +229,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
         entity.remove();
     }
 
-    public static void removeLink(Block block)
+    default void removeLink(Block block)
     {
         if(!CustomBlockData.hasCustomBlockData(block, CustomItemsAPI.singleton))
             return;
@@ -271,9 +239,9 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
     }
 
     @Override
-    public void onBlockPhysicsUpdate(BlockPhysicsEvent e) {
+    default void onBlockPhysicsUpdate(BlockPhysicsEvent e) {
 
-        switch (getDirectionality())
+        switch (directionality())
         {
             case WallBlock, WallUDBlock, WallDBlock: break;
             default : return;
@@ -281,7 +249,7 @@ public abstract class BlockStateLibrary extends PlaceableLibrary {
 
         if(e.getBlock().getType() != Material.AIR)
             naturalBlockBreak(e.getBlock(), true);
-        if(getPlacementDirection(e.getBlock()).getOppositeFace() == e.getBlock().getFace(e.getSourceBlock()))
+        if(placementDirection(e.getBlock()).getOppositeFace() == e.getBlock().getFace(e.getSourceBlock()))
         {
             //attached block broken
             if(!e.getSourceBlock().isBuildable())

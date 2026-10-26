@@ -1,4 +1,4 @@
-package arnett.customItemsAPI.ItemLibraries;
+package arnett.customItemsAPI.items;
 
 public enum Directionality {
     UD,

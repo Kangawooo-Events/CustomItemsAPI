@@ -1,6 +1,7 @@
 package arnett.customItemsAPI;
 
 import arnett.customItemsAPI.Listeners.GeneralItemListener;
+import arnett.customItemsAPI.items.modules.callbacks.TrackedCallbacks;
 import cd.arnett.caddamands.cattamands.arguments.Cattarameter;
 import cd.arnett.caddamands.cattamands.cattamand.LiteralCattamand;
 import cd.arnett.caddamands.cattamands.interpretation.Catterpreter;
@@ -50,6 +51,9 @@ public final class CustomItemsAPI extends JavaPlugin {
             worldGuardEnabled = true;
         }
 
+        //track callbacks
+        registerCallbacks();
+
         //register the general item listener
         getServer().getPluginManager().registerEvents(new GeneralItemListener(), this);
 
@@ -63,12 +67,29 @@ public final class CustomItemsAPI extends JavaPlugin {
         getLifecycleManager().registerEventHandler(
                 LifecycleEvents.COMMANDS.newHandler(ItemManager::registerGiveCommand).priority(6767)
         );
+
     }
 
     @Override
     public void onDisable() {
         // Plugin shutdown logic
     }
+
+    //endregion
+
+
+    //region Included Registrations
+
+    /*=================================================================================================
+                        -  Included Registrations  -
+    =================================================================================================*/
+
+
+    public void registerCallbacks()
+    {
+        //nothing here implemented yet
+    }
+
 
     //endregion
 

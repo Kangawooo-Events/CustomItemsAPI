@@ -1,4 +1,4 @@
-package arnett.customItemsAPI.ItemLibraries.CustomBlockTypes;
+package arnett.customItemsAPI.items.modules.placeable;
 
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;

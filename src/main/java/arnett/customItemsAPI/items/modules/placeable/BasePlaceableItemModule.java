@@ -1,38 +1,27 @@
-package arnett.customItemsAPI.ItemLibraries.CustomBlockTypes;
+package arnett.customItemsAPI.items.modules.placeable;
 
-import arnett.customItemsAPI.ItemLibraries.ItemLibrary;
-import arnett.customItemsAPI.ItemLibraries.Directionality;
+import arnett.customItemsAPI.items.Directionality;
 import arnett.customItemsAPI.CustomItemsAPI;
-import arnett.customItemsAPI.ItemManager;
+import arnett.customItemsAPI.items.modules.ItemModule;
 import com.jeff_media.customblockdata.CustomBlockData;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
 import org.bukkit.block.PistonMoveReaction;
 import org.bukkit.entity.*;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.block.BlockPhysicsEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.util.BoundingBox;
-import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
-import java.util.List;
-import java.util.UUID;
-
-public abstract class PlaceableLibrary extends ItemLibrary {
+/**
+ * Abstract interface intended to be defined by inheriting interfaces not extended by a class
+ */
+public interface BasePlaceableItemModule extends ItemModule {
 
     //region Abstract Properties
 
@@ -44,17 +33,30 @@ public abstract class PlaceableLibrary extends ItemLibrary {
     /**
      * @return Namespaced Key which leads to the block display's resource in a resource pack
      */
-    public abstract NamespacedKey getDisplayModelKey();
+    NamespacedKey displayModelKey();
 
     /**
      * @return The reaction this block has when pushed by a Piston
      */
-    public abstract PistonMoveReaction getPistonPushable();
+    PistonMoveReaction pistonPushable();
 
-    public abstract Directionality getDirectionality();
+    /**
+     * @return Placement directions this can be placed at
+     */
+    Directionality directionality();
 
+    /**
+     * @return Material type of placement
+     */
+    Material placementMaterial();
+
+    /**
+     * @return The sound played when breaking
+     */
+    Sound breakSound();
 
     //endregion
+
 
     //region Optional Properties
 
@@ -65,27 +67,44 @@ public abstract class PlaceableLibrary extends ItemLibrary {
     /**
      * @return The material source for the particles which appear when broken (defaults to the base material)
      */
-    public Material getBreakParticleMaterial()
+    default Material breakParticleMaterial()
     {
-        return getBaseMaterial();
+        return placementMaterial();
     }
 
     /**
-     * @return The sound played when breaking
-     * (defaults to the base mateial's break sound, or Stone break if it doesn't have one)
+     * @return Key to item resource to be used as item display model when placed on wall
+     * (defaults to displayModelKey())
      */
-    public Sound getBreakSound()
+    default NamespacedKey wallDisplayModelKey()
     {
-        Material base = getBaseMaterial();
-
-        if(base.isBlock())
-            return getBaseMaterial().createBlockData().getSoundGroup().getBreakSound();
-
-        else
-            return Sound.BLOCK_STONE_BREAK;
+        return displayModelKey();
     }
 
+    /**
+     * @return Key to item resource to be used as item display model when placed on wall
+     * (defaults to displayModelKey())
+     */
+    default NamespacedKey roofDisplayModelKey()
+    {
+        return displayModelKey();
+    }
+
+    /**
+     * Defines the offset to place the display model at. Default at .5, .5, .5
+     * @return value
+     */
+    default Vector displayModelOffset() {
+        return new Vector(.5, .5, .5);
+    }
+
+    /**
+     * @return should this block resist explosions (defaults to false)
+     */
+    default boolean explosionResistant(){return false;}
+
     //endregion
+
 
     //region Static Properties
 
@@ -96,122 +115,63 @@ public abstract class PlaceableLibrary extends ItemLibrary {
     /**
      * Namespaced used by CustomBlockData & Interactors to store the UUID of their display Entity
      */
-    public static NamespacedKey DisplayLinkNamespace = new NamespacedKey("customitems", "linkeddisplay");
+    NamespacedKey DisplayLinkNamespace = new NamespacedKey("customitems", "linkeddisplay");
 
     /**
      * Namespaced used by Explosive blocks to define their range
      */
-    public static NamespacedKey explosiveRangeNamespace = new NamespacedKey("customitems", "explosiverange");
+    NamespacedKey explosiveRangeNamespace = new NamespacedKey("customitems", "explosiverange");
 
     /**
      * Namespaced used by Directional blocks to define the direction they are placed
      */
-    public static NamespacedKey placementDirectionNamespace = new NamespacedKey("customitems", "placementdirection");
-
+    NamespacedKey placementDirectionNamespace = new NamespacedKey("customitems", "placementdirection");
 
     //endregion
 
-    public NamespacedKey getWallDisplayModelKey()
-    {
-        return getDisplayModelKey();
-    }
 
-    public NamespacedKey getRoofDisplayModelKey()
-    {
-        return getDisplayModelKey();
-    }
+    //todo move to custom Display module
+    //region placement
 
-    public List<NamespacedKey> getAttachmentModelKeys()
-    {
-        return List.of();
-    }
+    /*=================================================================================================
+                        -  placement  -
+    =================================================================================================*/
 
     /**
-     * Defines the offset to place the display model at. Default at .5, .5, .5
-     * @return value
+     * Call to try placing this block with the specified parameters
+     * @param blockReplaced The block which was replaced with the placed block
+     * @param faceClicked Face of the block which was clicked in the process of placing this
+     * @param itemPlaced The item which placed
+     * @param placementEvent generic cancelable placement event
+     * @return was the placement a success
      */
-    public Vector getDisplayModelOffset() {
-        return new Vector(.5, .5, .5);
-    }
+    boolean tryPlace(Block blockReplaced, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent);
 
-
-
-    public UUID createDisplay(Location spot, BlockFace against)
+    /**
+     * Gets the placement direction of a placed custom block, mostly used for attached block in physics block updates
+     * @param block custom block
+     * @return direction placed
+     */
+    default BlockFace placementDirection(Block block)
     {
-        return createDisplay(new PlacementData(spot, new Quaternionf(), against));
+        Integer face = new CustomBlockData(block, CustomItemsAPI.singleton)
+                .get(placementDirectionNamespace, PersistentDataType.INTEGER);
+
+        if(face == null)
+            return BlockFace.DOWN;
+
+        return BlockFace.values()[face];
     }
 
-    public UUID createDisplay(Location spot, BlockPlaceEvent e)
-    {
-        BlockFace against = e.getBlockPlaced().getFace(e.getBlockAgainst());
-        var displaySpot = getDisplaySpot(spot, e.getPlayer(), against);
 
-        if(displaySpot == null)
-            return null;
-
-        return createDisplay(displaySpot);
-    }
-
-    public UUID createDisplay(Location spot, PlayerInteractEvent e)
-    {
-        var displaySpot = getDisplaySpot(spot, e.getPlayer(), e.getBlockFace());
-
-        if(displaySpot == null)
-            return null;
-
-        return createDisplay(displaySpot);
-    }
-
-    public UUID createDisplay(PlacementData placementData)
-    {
-        //create the display entity at the offset
-        ItemDisplay display = placementData.location().getWorld().spawn(
-                placementData.location().clone().add(getDisplayModelOffset()), ItemDisplay.class, (e) -> {
-                        //set an item to display
-                        ItemStack toDisplay = new ItemStack(Material.STICK);
-
-                        ItemMeta meta = toDisplay.getItemMeta();
-
-                        meta.displayName(Component.text(getName(), NamedTextColor.GOLD));
-
-                        //change it to the display model
-                        NamespacedKey displayModelKey = switch (placementData.faceOn())
-                        {
-                            case DOWN -> getRoofDisplayModelKey();
-                            case NORTH, EAST, SOUTH, WEST -> getWallDisplayModelKey();
-                            default -> getDisplayModelKey();
-                        };
-
-                        meta.setItemModel(displayModelKey);
-
-                        toDisplay.setItemMeta(meta);
-
-                        //set the display
-                        e.setItemStack(toDisplay);
-
-                        //only do rotation logic if we are preforming a rotation
-                        //apply the rotation
-                        e.setTransformation(
-                                new Transformation(
-                                        new Vector3f(0, 0, 0),
-                                        new Quaternionf(),
-                                        new Vector3f(1, 1, 1),
-                                        placementData.rotation()
-                                )
-                        );
-                }
-        );
-
-
-        return display.getUniqueId();
-    }
-
-    protected boolean isWallFace(BlockFace face)
-    {
-        return !(face == BlockFace.DOWN || face == BlockFace.UP || face == BlockFace.SELF);
-    }
-
-    public PlacementData getDisplaySpot(Location spot, Player player, BlockFace against)
+    /**
+     * Gets the placement data based on the placer, location and face placed aginst
+     * @param spot spot the item is being placed
+     * @param player player who placed the item (used for location and direction)
+     * @param against face the block was placed aginst
+     * @return placement data for these parameters
+     */
+    default PlacementData getPlacementData(Location spot, Player player, BlockFace against)
     {
         //set the rotation according to player direction
         Location placedSpot = spot.clone();
@@ -219,7 +179,7 @@ public abstract class PlaceableLibrary extends ItemLibrary {
         //used to track the item display's roll (used like if it needs to be flipped)
         Quaternionf rotation = null;
 
-        switch (getDirectionality()){
+        switch (directionality()){
 
             case Directionality.NESW -> rotation = PlacementHelper.placeNESW(player, against);
 
@@ -319,41 +279,48 @@ public abstract class PlaceableLibrary extends ItemLibrary {
     }
 
 
-    /**
-     *
-     * @param blockReplaced The block which was replaced with the placed block
-     * @param faceClicked Face of the block which was clicked in the process of placing this
-     * @param itemPlaced The item which placed
-     * @param placementEvent
-     * @return
-     */
-    public abstract boolean tryPlace(Block blockReplaced, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent);
+    //endregion
 
-    /**
-     * Called whenever a placement of this block is successful
-     * @param blockReplaced The block which was replaced with the placed block
-     * @param itemPlaced The item which placed
-     * @param placer Player placing the block
-     */
-    public abstract void onPlaced(Block blockReplaced, ItemStack itemPlaced, Player placer);
 
-    @Override
-    public String toString()
+    //region Helpers
+
+    /*=================================================================================================
+                        -  Helpers  -
+    =================================================================================================*/
+
+    default boolean isWallFace(BlockFace face)
     {
-        return getName();
+        return !(face == BlockFace.DOWN || face == BlockFace.UP || face == BlockFace.SELF);
     }
 
-    public void onCopy(PlayerPickItemEvent e, Entity targetEntity, Block targetBlock)
+    //endregion
+
+
+    //region Events
+
+    /*=================================================================================================
+                        -  Events  -
+    =================================================================================================*/
+
+    /**
+     * Called to run middle click pick item logic (currently only works for blocks)
+     * @param e pick item event
+     */
+    //todo make copy for interaction types aswell later
+    default void pickItem(PlayerPickItemEvent e)
     {
         if(e.isCancelled())
             return;
+
+        //grab the library since we need it a few times
+        var library = getLibrary();
 
         //cancel the event since we have to override it ourselves
         e.setCancelled(true);
 
         //if this item is already in the inventory then swap to it
         PlayerInventory playerInventory = e.getPlayer().getInventory();
-        int containingSlot = findInInventory(playerInventory);
+        int containingSlot = library.findInInventory(playerInventory);
 
         if(containingSlot != -1)
         {
@@ -395,41 +362,60 @@ public abstract class PlaceableLibrary extends ItemLibrary {
             playerInventory.setHeldItemSlot(firstEmpty);
         }
 
-        e.getPlayer().getInventory().setItemInMainHand(getItem());
+        e.getPlayer().getInventory().setItemInMainHand(library.getItem());
     }
 
-    private void dropPlaceableItem(Location breakSpot)
+    /**
+     * Called whenever this item is dropped from a block breaking
+     */
+    void onPlaceableDropItem(Item droppedItem);
+
+    /**
+     * Called whenever this block is caught in a block physics update
+     * @param e BlockPhysicsEvent
+     */
+    void onBlockPhysicsUpdate(BlockPhysicsEvent e);
+
+    /**
+     * Called whenever a placement of this block is successful
+     * @param blockReplaced The block which was replaced with the placed block
+     * @param itemPlaced The item which placed
+     * @param placer Player placing the block
+     */
+    void onPlaced(Block blockReplaced, ItemStack itemPlaced, Player placer);
+
+
+    //endregion
+
+
+    //region Breaking
+
+    /*=================================================================================================
+                        -  Breaking  -
+    =================================================================================================*/
+
+    /**
+     * Call to break this custom block naturally at the given block location
+     * @param block block location of the custom placement
+     * @param dropItem should this drop an item
+     */
+    void naturalBlockBreak(Block block, boolean dropItem);
+
+
+    /**
+     * Call to drop an instance of this item at the given location
+     */
+    default void dropPlaceableItem(Location breakSpot)
     {
         //drop the item of the base material and call on BlockDrop item for consistency
         //because this is what it would normally look like if the player broke a block
         breakSpot.getWorld().dropItemNaturally(
                 breakSpot,
-                new ItemStack(getBaseMaterial()),
+                new ItemStack(getLibrary().getItem()),
                 this::onPlaceableDropItem
         );
     }
 
-    public void onPlaceableDropItem(Item baseMaterialItem)
-    {
-        baseMaterialItem.setItemStack(getItem());
-    }
-
-    public void onBlockPhysicsUpdate(BlockPhysicsEvent e)
-    {
-        return;
-    }
-
-    public abstract void naturalBlockBreak(Block block, boolean dropItem);
-
-    public BlockFace getPlacementDirection(Block block)
-    {
-        Integer face = new CustomBlockData(block, CustomItemsAPI.singleton)
-                .get(placementDirectionNamespace, PersistentDataType.INTEGER);
-
-        if(face == null)
-            return BlockFace.DOWN;
-
-        return BlockFace.values()[face];
-    }
+    //endregion
 
 }

@@ -1,6 +1,6 @@
 package arnett.customItemsAPI;
 
-import arnett.customItemsAPI.ItemLibraries.ItemLibrary;
+import arnett.customItemsAPI.items.ItemLibrary;
 import cd.arnett.caddamands.cattamands.arguments.Cattarameter;
 import cd.arnett.caddamands.cattamands.cattamand.Cattamand;
 import cd.arnett.caddamands.cattamands.cattamand.LiteralCattamand;
@@ -50,7 +50,7 @@ public final class ItemManager {
      * @return Gets a List of the names of Items which have been registered
      */
     public static List<String> getItemNames() {
-        return items.values().stream().map(ItemLibrary::getName).toList();
+        return items.values().stream().map(ItemLibrary::name).toList();
     }
 
     /**
@@ -111,8 +111,8 @@ public final class ItemManager {
         //add all the items to the item map
         for(ItemLibrary item : items)
         {
-            customItemMaterials.add(item.getBaseMaterial());
-            ItemManager.items.put(item.getIdentifier(), item);
+            customItemMaterials.add(item.baseMaterial());
+            ItemManager.items.put(item.identifier(), item);
         }
     }
 
@@ -135,7 +135,7 @@ public final class ItemManager {
         ArrayList<Cattamand> giveCommands = new ArrayList<>();
 
         items.forEach(( item, lib) -> {
-            giveCommands.add(lib.getGiveItemCommand());
+            giveCommands.add(lib.giveItemCommand());
         });
 
         //register the give commands of the items
@@ -171,7 +171,7 @@ public final class ItemManager {
      */
     static void registerEvents(JavaPlugin plugin, ItemLibrary item)
     {
-        item.getListeners().forEach(listener -> {
+        item.listeners().forEach(listener -> {
             plugin.getServer().getPluginManager().registerEvents(listener, plugin);
         });
     }
@@ -182,7 +182,7 @@ public final class ItemManager {
      */
     static void unregisterEvents(ItemLibrary item)
     {
-        item.getListeners().forEach(listener -> {
+        item.listeners().forEach(listener -> {
             HandlerList.unregisterAll(listener);
         });
     }
@@ -255,7 +255,7 @@ public final class ItemManager {
 
         for(ItemLibrary data : items.values())
         {
-            if(data.getName().equals(name))
+            if(data.name().equals(name))
                 return data;
         }
 

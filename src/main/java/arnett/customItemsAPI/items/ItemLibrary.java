@@ -1,5 +1,6 @@
-package arnett.customItemsAPI.ItemLibraries;
+package arnett.customItemsAPI.items;
 
+import arnett.customItemsAPI.items.modules.callbacks.TrackedCallbacks;
 import cd.arnett.caddamands.cattamands.arguments.ArgumentHelper;
 import cd.arnett.caddamands.cattamands.arguments.Cattarameter;
 import cd.arnett.caddamands.cattamands.cattamand.Cattamand;
@@ -8,6 +9,8 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import io.papermc.paper.event.player.PlayerInventorySlotChangeEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -23,8 +26,11 @@ import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.function.BiConsumer;
 
 public abstract class ItemLibrary {
 
@@ -51,22 +57,22 @@ public abstract class ItemLibrary {
     /**
      * @return The name of this item
      */
-    public abstract String getName();
+    public abstract String name();
 
     /**
      * @return Namespace used to identify the specific item
      */
-    public abstract NamespacedKey getIdentifier();
+    public abstract NamespacedKey identifier();
 
     /**
      * @return Namespaced Key which leads to the Item's resource in a resource pack
      */
-    public abstract NamespacedKey getItemModelKey();
+    public abstract NamespacedKey itemModelKey();
 
     /**
      * @return The base material this item uses in inventory
      */
-    public abstract Material getBaseMaterial();
+    public abstract Material baseMaterial();
 
     //endregion
 
@@ -80,9 +86,9 @@ public abstract class ItemLibrary {
     /**
      * @return List of Listeners to be registered along with this item,
      * useful for unloading whenever that gets implemented, but I wouldn't
-     * worry about using this it's not a bih deal
+     * worry about using this it's not a big deal
      */
-    public List<Listener> getListeners()
+    public List<Listener> listeners()
     {
         return List.of();
     }
@@ -90,26 +96,26 @@ public abstract class ItemLibrary {
     /**
      * @return The Display name of this item (defaults to getName())
      */
-    public String getDisplayName()
+    public String displayName()
     {
-        return getName();
+        return name();
     }
 
     /**
      * @return The Give cattamand provided by the itemLibrary to be applied as a child of <br>
      * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/cgive &ltPlayer(s)&gt ... <br>
      */
-    public Cattamand getGiveItemCommand()
+    public Cattamand giveItemCommand()
     {
         return new LiteralCattamand(
-                getName(),
+                name(),
                 "op",
                 List.of(
                         new Cattarameter(
                                 "count",
                                 IntegerArgumentType.integer(
                                         0,
-                                        getBaseMaterial().getMaxStackSize()
+                                        baseMaterial().getMaxStackSize()
                                 ),
                                 null,
                                 (ctx) -> {
@@ -135,7 +141,7 @@ public abstract class ItemLibrary {
                     //successful execution
                     return Command.SINGLE_SUCCESS;
                 }
-        ).setAliases(List.of(getIdentifier().toString()));
+        ).setAliases(List.of(identifier().toString()));
     }
 
     /**
@@ -148,7 +154,7 @@ public abstract class ItemLibrary {
     }
 
     /**
-     * @return Whether this item should continue its interaction behaviour when it would be canceled by WorldGuard.
+     * @return Whether this item should continue its interaction behavior when it would be canceled by WorldGuard.
      * this DOES NOT override worldguard, it only overrides the check CustomItemsAPI does before running
      * its interaction code.
      */
@@ -158,9 +164,9 @@ public abstract class ItemLibrary {
     }
 
     /**
-     * Defines whether inventory movement related costly events like
+     * Determines whether costly inventory movement related events like
      * PlayerInventorySlotChangeEvent are tracked for this item to save on performance
-     * @return Override to TRUE to track these events
+     * @return Override to TRUE to track these events for this item
      */
     public boolean trackInventoryMovements()
     {
@@ -181,7 +187,7 @@ public abstract class ItemLibrary {
     public ItemStack getItem() {
 
         //create item stack of config set material
-        ItemStack item = ItemStack.of(getBaseMaterial());
+        ItemStack item = ItemStack.of(baseMaterial());
 
         item.setItemMeta(getModifiedItemMeta(item));
 
@@ -212,14 +218,14 @@ public abstract class ItemLibrary {
         //change the item model
         ItemMeta meta = item.getItemMeta();
 
-        meta.setItemModel(getItemModelKey());
+        meta.setItemModel(itemModelKey());
 
-        meta.getPersistentDataContainer().set(getIdentifier(), PersistentDataType.BOOLEAN, true);
+        meta.getPersistentDataContainer().set(identifier(), PersistentDataType.BOOLEAN, true);
 
         //tag it as a custom item with a namespace which can be easily accessed later to get the specific item type
-        meta.getPersistentDataContainer().set(customItemTag, PersistentDataType.STRING, getIdentifier().toString());
+        meta.getPersistentDataContainer().set(customItemTag, PersistentDataType.STRING, identifier().toString());
 
-        meta.itemName(MiniMessage.miniMessage().deserialize(getDisplayName()));
+        meta.itemName(MiniMessage.miniMessage().deserialize(displayName()));
 
         return meta;
     }
@@ -260,10 +266,10 @@ public abstract class ItemLibrary {
             return false;
 
         //start with general material check
-        if(!stack.getType().equals(getBaseMaterial()))
+        if(!stack.getType().equals(baseMaterial()))
             return false;
 
-        return stack.getPersistentDataContainer().has(getIdentifier());
+        return stack.getPersistentDataContainer().has(identifier());
     }
 
     /**
@@ -273,7 +279,7 @@ public abstract class ItemLibrary {
      */
     public int findInInventory(Inventory inventory)
     {
-        var itemSlots = inventory.all(getBaseMaterial());
+        var itemSlots = inventory.all(baseMaterial());
 
         //not in this inventory
         if(itemSlots.isEmpty())
@@ -301,7 +307,7 @@ public abstract class ItemLibrary {
 
         for(int i = 0; i < inventory.getSize(); i++)
         {
-            if(inventory.getItem(i) == null || inventory.getItem(i).getType() != getBaseMaterial())
+            if(inventory.getItem(i) == null || inventory.getItem(i).getType() != baseMaterial())
                 continue;
             if(isItem(inventory.getItem(i)))
                 containingSlots.add(i);
@@ -374,5 +380,13 @@ public abstract class ItemLibrary {
 
 
     //endregion
+
+    //idk where to put this so it's just left outside :/
+    @Override
+    public String toString()
+    {
+        return name();
+    }
+
 
 }

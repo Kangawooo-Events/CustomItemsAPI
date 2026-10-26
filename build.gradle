@@ -72,7 +72,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'cd.arnett'
             artifactId = 'customitemsapi'
-            version = '4.A.1'
+            version = '5.A.0'
             from components.java
         }
     }
