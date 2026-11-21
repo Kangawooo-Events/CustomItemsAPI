@@ -1,16 +1,17 @@
 package arnett.customItemsAPI.items;
 
-import arnett.customItemsAPI.items.modules.callbacks.TrackedCallbacks;
+import arnett.customItemsAPI.items.modules.callbacks.ItemCallbackManager;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.ItemEvent;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.ModifyNewItemMeta;
 import cd.arnett.caddamands.cattamands.arguments.ArgumentHelper;
 import cd.arnett.caddamands.cattamands.arguments.Cattarameter;
 import cd.arnett.caddamands.cattamands.cattamand.Cattamand;
 import cd.arnett.caddamands.cattamands.cattamand.LiteralCattamand;
+import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import io.papermc.paper.event.player.PlayerInventorySlotChangeEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.apache.commons.lang3.ClassUtils;
-import org.apache.commons.lang3.reflect.MethodUtils;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -18,7 +19,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -26,11 +26,7 @@ import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.*;
-import java.util.function.BiConsumer;
 
 public abstract class ItemLibrary {
 
@@ -58,6 +54,11 @@ public abstract class ItemLibrary {
      * @return The name of this item
      */
     public abstract String name();
+
+    /**
+     * @return The Display name of this item (defaults to getName())
+     */
+    public abstract String displayName();
 
     /**
      * @return Namespace used to identify the specific item
@@ -93,13 +94,6 @@ public abstract class ItemLibrary {
         return List.of();
     }
 
-    /**
-     * @return The Display name of this item (defaults to getName())
-     */
-    public String displayName()
-    {
-        return name();
-    }
 
     /**
      * @return The Give cattamand provided by the itemLibrary to be applied as a child of <br>
@@ -189,7 +183,7 @@ public abstract class ItemLibrary {
         //create item stack of config set material
         ItemStack item = ItemStack.of(baseMaterial());
 
-        item.setItemMeta(getModifiedItemMeta(item));
+        item.setItemMeta(modifyNewItemMeta(item));
 
         return item;
     }
@@ -213,7 +207,8 @@ public abstract class ItemLibrary {
      * @param item The base item to get the itemMeta from
      * @return the modified Item Meta
      */
-    public ItemMeta getModifiedItemMeta(ItemStack item)
+    @OverridingMethodsMustInvokeSuper
+    public ItemMeta modifyNewItemMeta(ItemStack item)
     {
         //change the item model
         ItemMeta meta = item.getItemMeta();
@@ -226,6 +221,9 @@ public abstract class ItemLibrary {
         meta.getPersistentDataContainer().set(customItemTag, PersistentDataType.STRING, identifier().toString());
 
         meta.itemName(MiniMessage.miniMessage().deserialize(displayName()));
+
+        //do other item meta things
+        ItemCallbackManager.invokeCallbacks(this, ModifyNewItemMeta.class, null, meta);
 
         return meta;
     }
@@ -329,57 +327,69 @@ public abstract class ItemLibrary {
     /**
      * Called whenever the Item is used (Right/Left click with item in hand)
      */
-    public void onItemUsed(PlayerInteractEvent e)
-    {
-        return;
-    }
-
-    /**
-     * Called whenever the Item is used (Right click with item in hand)
-     */
-    public void onItemUsedOnEntity(PlayerInteractEntityEvent e)
-    {
-        return;
-    }
-
+    @ItemEvent
+    public void onItemUsed(PlayerInteractEvent e) {}
 
     /**
      * Called whenever the Item is used to attack another entity
      */
-    public void onItemUsedInAttack(EntityDamageByEntityEvent e, ItemStack item) {return;}
+    @ItemEvent
+    public void onItemUsedInAttack(EntityDamageByEntityEvent e) {return;}
 
     /**
-     * Called whenever the Item is picked up by a player specifically (also calls onEntityPickupItem)
+     * Called whenever the Item is used to attack another entity (overload with more info)
      */
-    public void onPlayerPickupItem(EntityPickupItemEvent e, Player player){return;}
+    @ItemEvent("item")
+    public void onItemUsedInAttack(EntityDamageByEntityEvent e, ItemStack item) {return;}
 
     /**
      * Called whenever the Item is picked up by a player
      */
-    public void onEntityPickupItem(EntityPickupItemEvent e){return;}
+    @ItemEvent
+    public void onEntityPickupItem(EntityPickupItemEvent e){}
+
+    /**
+     * Called whenever the Item is picked up by a player specifically
+     */
+    @ItemEvent("player")
+    public void onPlayerPickupItem(EntityPickupItemEvent e, Player player){return;}
+
 
     /**
      * Called whenever the Item is dropped by a player
      */
-    public void onPlayerDropItem(PlayerDropItemEvent e){return;}
+    @ItemEvent
+    public void onPlayerDropItem(PlayerDropItemEvent e){}
+
+    /**
+     * Called whenever the Item changed in a player's inventory slot (including movement between them).
+     * To be used you MUST OVERRIDE trackInventoryMovements() and return TRUE,
+     * It is like this to save on performance since this is a very common event,<br>
+     * (subcall of onItemChangePlayerInventorySlot)
+     * */
+    @ItemEvent
+    public void onItemChangePlayerInventorySlot(PlayerInventorySlotChangeEvent e){}
 
     /**
      * Called whenever the Item is added to a player's inventory slot (including movement between them).
      * To be used you MUST OVERRIDE trackInventoryMovements() and return TRUE,
-     * It is like this to save on performance since this is a very common event
+     * It is like this to save on performance since this is a very common event,<br>
+     * (subcall of onItemChangePlayerInventorySlot)
      */
-    public void onItemEnterPlayerInventorySlot(PlayerInventorySlotChangeEvent e){return;}
+    @ItemEvent("enter")
+    public void onItemEnterPlayerInventorySlot(PlayerInventorySlotChangeEvent e){}
 
     /**
      * Called whenever the Item is removed from a player's inventory slot (including movement between them).
      * To be used you MUST OVERRIDE trackInventoryMovements() and return TRUE,
-     * It is like this to save on performance since this is a very common event
+     * It is like this to save on performance since this is a very common event,<br>
+     * (subcall of onItemChangePlayerInventorySlot)
      */
-    public void onItemExitPlayerInventorySlot(PlayerInventorySlotChangeEvent e){return;}
-
-
+    @ItemEvent("exit")
+    public void onItemExitPlayerInventorySlot(PlayerInventorySlotChangeEvent e){}
 
     //endregion
+
 
     //idk where to put this so it's just left outside :/
     @Override

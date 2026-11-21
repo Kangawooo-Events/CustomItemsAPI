@@ -1,11 +1,12 @@
 package arnett.customItemsAPI.Listeners;
 
 import arnett.customItemsAPI.Helpers.BlockHelper;
-import arnett.customItemsAPI.items.modules.placeable.interactor.PlaceableInteractorItemModule;
+import arnett.customItemsAPI.items.modules.callbacks.ItemCallbackManager;
+import arnett.customItemsAPI.items.modules.placeable.interactor.InteractorPlaceableItemLibrary;
 import arnett.customItemsAPI.CustomItemsAPI;
 import arnett.customItemsAPI.Helpers.WorldGuardHelper;
 import arnett.customItemsAPI.ItemManager;
-import arnett.customItemsAPI.items.modules.placeable.BlockState.PlaceableBlockStateItemModule;
+import arnett.customItemsAPI.items.modules.placeable.blockState.BlockStatePlaceableItemLibrary;
 import arnett.customItemsAPI.items.modules.placeable.BasePlaceableItemModule;
 import arnett.customItemsAPI.items.ItemLibrary;
 import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
@@ -58,27 +59,36 @@ public class GeneralItemListener implements Listener {
             return;
         }
 
-        ItemLibrary data = ItemManager.getLibrary(e.getItemInHand());
+        ItemLibrary lib = ItemManager.getLibrary(e.getItemInHand());
 
         //is this a custom item
-        if(data == null)
+        if(lib == null)
             return;
 
-        if(data instanceof PlaceableBlockStateItemModule blockData)
-            blockData.onBlockPlaced(e);
+        if(lib instanceof BlockStatePlaceableItemLibrary)
+            ItemCallbackManager.invokeEventCallbacks(lib, e);
     }
 
     @EventHandler
     public void onBlockRemovedByPlayer(BlockBreakEvent e)
     {
         //get custom data (getLibrary has a quick exit)
-        ItemLibrary data = ItemManager.getLibrary(e.getBlock());
+        ItemLibrary lib = ItemManager.getLibrary(e.getBlock());
 
         //is this a custom item
-        if(data == null)
+        if(lib == null)
             return;
 
-        if(data instanceof PlaceableBlockStateItemModule blockStateData)
+        //call generic
+        if(lib instanceof BasePlaceableItemModule basePlaceableItemModule)
+        {
+            //call item's break function
+            basePlaceableItemModule.onPlacementBroken(e.getBlock(), e.getPlayer(), e);
+            ItemCallbackManager.invokeEventCallbacks(lib, e);
+        }
+
+        //call specific
+        if(lib instanceof BlockStatePlaceableItemLibrary blockStateData)
             //call item's break function
             blockStateData.onBlockBroken(e);
 
@@ -86,7 +96,7 @@ public class GeneralItemListener implements Listener {
 
     //endregion
 
-    //also contains Placement for non-placable items
+    //also contains Placement for non-playable items
     //region Use
 
     /*=================================================================================================
@@ -108,15 +118,15 @@ public class GeneralItemListener implements Listener {
         //get item used
         ItemStack used = e.getPlayer().getInventory().getItem(e.getHand());
 
-        ItemLibrary data = ItemManager.getLibrary(used);
+        ItemLibrary lib = ItemManager.getLibrary(used);
 
         //is this a custom item
-        if(data == null)
+        if(lib == null)
             return;
 
         //world guard check
         if(CustomItemsAPI.worldGuardEnabled &&
-                !data.overrideWorldGuardInteract() &&
+                !lib.overrideWorldGuardInteract() &&
                 !WorldGuardHelper.canWorldGuardInteract(e.getPlayer(), e.getRightClicked().getLocation()))
         {
             e.setCancelled(true);
@@ -124,7 +134,7 @@ public class GeneralItemListener implements Listener {
         }
 
         //call its use function
-        data.onItemUsedOnEntity(e);
+        ItemCallbackManager.invokeEventCallbacks(lib, e);
     }
 
     void blockInteractCheck(PlayerInteractEvent e)
@@ -147,39 +157,50 @@ public class GeneralItemListener implements Listener {
         }
 
         //they are interacting with a placeable block
-        if(data instanceof PlaceableBlockStateItemModule blockStateData)
+        if(data instanceof BlockStatePlaceableItemLibrary blockStateData)
         {
             //call item's interact function
-            blockStateData.onBlockInteracted(e, e.useInteractedBlock());
+            blockStateData.onBlockInteracted(e);
         }
     }
 
     void itemInteractCheck(PlayerInteractEvent e)
     {
         //check the item used
-        ItemLibrary data = ItemManager.getLibrary(e.getItem());
+        ItemLibrary lib = ItemManager.getLibrary(e.getItem());
 
         //is this a custom item
-        if(data == null)
+        if(lib == null)
             return;
 
-        //call its use function
-        data.onItemUsed(e);
+        if(lib instanceof BasePlaceableItemModule && isPlacementInteraction(e))
+        {
+            //call item's place function
+            ItemCallbackManager.invokeEventCallbacks(lib, e, "place");
+        }
+        else
+        {
+            //call its use function
+            ItemCallbackManager.invokeEventCallbacks(lib, e);
+        }
+    }
 
+    boolean isPlacementInteraction(PlayerInteractEvent e)
+    {
         Block clicked = e.getClickedBlock();
 
         //is this something that can be placed on?
         if(clicked == null)
-            return;
+            return false;
 
         //if the block's interact function doesn't prevent placing then continue
         if(e.useItemInHand() == Event.Result.DENY || e.getAction().isLeftClick())
-            return;
+            return false;
 
-
+        //if the player is sneaking and the block interaction overrides the placement cancel
         if(!e.getPlayer().isSneaking() && BlockHelper.isUsable(e.getClickedBlock()))
         {
-            return;
+            return false;
         }
 
         //world guard check
@@ -187,15 +208,11 @@ public class GeneralItemListener implements Listener {
                 !WorldGuardHelper.canWorldGuardPlace(e.getPlayer(), e.getInteractionPoint()))
         {
             e.setCancelled(true);
-            return;
+            return false;
         }
 
-        //possibly they are trying to place an interactable item since this doesn't need to be a placeable block state
-        if(data instanceof PlaceableInteractorItemModule interactorData)
-        {
-            //call item's place function
-            interactorData.handleItemPlacementInteraction(e, e.useItemInHand());
-        }
+        //all checks passed this is a placement interaction
+        return true;
     }
 
     @EventHandler
@@ -212,7 +229,10 @@ public class GeneralItemListener implements Listener {
         ItemLibrary lib = ItemManager.getLibrary(item);
 
         if(lib != null)
-            lib.onItemUsedInAttack(e, item);
+        {
+            ItemCallbackManager.invokeEventCallbacks(lib, e);
+            ItemCallbackManager.invokeEventCallbacks(lib, e, "item", item);
+        }
     }
 
     //endregion
@@ -245,17 +265,17 @@ public class GeneralItemListener implements Listener {
 
         if(results != null && results.getHitBlock() != null)
         {
-            ItemLibrary data = ItemManager.getLibrary(results.getHitBlock());
+            ItemLibrary lib = ItemManager.getLibrary(results.getHitBlock());
 
             //is this a custom item
-            if(data == null)
+            if(lib == null)
                 return;
 
-            if(!(data instanceof BasePlaceableItemModule placeableData))
+            if(!(lib instanceof BasePlaceableItemModule))
                 return;
 
-            //call item's copy function
-            placeableData.pickItem(e);
+            //call callbacks
+            ItemCallbackManager.invokeEventCallbacks(lib, e);
         }
     }
 
@@ -274,14 +294,14 @@ public class GeneralItemListener implements Listener {
         if(e.isCancelled())
             return;
 
-        ItemLibrary data = ItemManager.getLibrary(e.getBlock());
+        ItemLibrary lib = ItemManager.getLibrary(e.getBlock());
 
         //handles 99% of cases without a custom block in O(1)
-        if(data == null)
+        if(lib == null)
             return;
 
-        if(data instanceof BasePlaceableItemModule placeable)
-            placeable.onBlockPhysicsUpdate(e);
+        if(lib instanceof BasePlaceableItemModule)
+            ItemCallbackManager.invokeEventCallbacks(lib, e);
 
     }
 
@@ -302,22 +322,21 @@ public class GeneralItemListener implements Listener {
             return;
 
         // check the surrounding blocks
-        e.blockList().removeIf(block ->{
+        e.blockList().forEach(block ->{
             //check if it is a custom block
             ItemLibrary lib = ItemManager.getLibrary(block);
 
             //not a custom item
             if(lib == null)
-                return false;
+                return;
 
             //it is a custom item
-            if(lib instanceof PlaceableBlockStateItemModule blockStateLib)
+            if(lib instanceof BlockStatePlaceableItemLibrary blockStateLib)
             {
-                return blockStateLib.onEntityExplode(e, block);
+                ItemCallbackManager.invokeEventCallbacks(lib, e);
+                ItemCallbackManager.invokeEventCallbacks(lib, e, "block", block);
+                blockStateLib.explodedLogic(e, block);
             }
-
-            //some other case
-            return false;
         });
 
         //check for nearby interactors
@@ -345,7 +364,7 @@ public class GeneralItemListener implements Listener {
         }
         else if(e.getEntity() != null && e.getEntity().getPersistentDataContainer().has(BasePlaceableItemModule.explosiveRangeNamespace))
         {
-            //probably a custom explosive, so check it's explosive pdc
+            //maybe a custom explosive, so check it's explosive pdc
             radius = e.getEntity().getPersistentDataContainer().get(
                     BasePlaceableItemModule.explosiveRangeNamespace, PersistentDataType.FLOAT
             );
@@ -363,9 +382,11 @@ public class GeneralItemListener implements Listener {
             if(lib == null)
                 return;
 
-            if(lib instanceof PlaceableInteractorItemModule interactorLibrary)
+            if(lib instanceof InteractorPlaceableItemLibrary interactorLibrary)
             {
-                interactorLibrary.onEntityExplode(e, interaction);
+                ItemCallbackManager.invokeEventCallbacks(lib, e);
+                ItemCallbackManager.invokeEventCallbacks(lib, e, "interaction", interaction);
+                interactorLibrary.explodedLogic(e, interaction);
             }
         });
     }
@@ -378,22 +399,24 @@ public class GeneralItemListener implements Listener {
             return;
 
         // check the surrounding blocks
-        e.blockList().removeIf(block ->{
+        e.blockList().forEach(block ->{
             //check if it is a custom block
             ItemLibrary lib = ItemManager.getLibrary(block);
 
             //not a custom item
             if(lib == null)
-                return false;
+                return;
 
             //it is a custom item
-            if(lib instanceof PlaceableBlockStateItemModule blockStateLib)
+            if(lib instanceof BlockStatePlaceableItemLibrary blockStateLib)
             {
-                return blockStateLib.onBlockExplode(e, block);
+                ItemCallbackManager.invokeEventCallbacks(lib, e);
+                ItemCallbackManager.invokeEventCallbacks(lib, e, "block", block);
+                blockStateLib.explodedLogic(e, block);
             }
 
             //some other case
-            return false;
+            return;
         });
 
         //check for nearby interactors
@@ -422,9 +445,11 @@ public class GeneralItemListener implements Listener {
             if(lib == null)
                 return;
 
-            if(lib instanceof PlaceableInteractorItemModule interactorLibrary)
+            if(lib instanceof InteractorPlaceableItemLibrary interactorLibrary)
             {
-                interactorLibrary.onBlockExplode(e, interaction);
+                ItemCallbackManager.invokeEventCallbacks(lib, e);
+                ItemCallbackManager.invokeEventCallbacks(lib, e, "interaction", interaction);
+                interactorLibrary.explodedLogic(e, interaction);
             }
         });
 
@@ -457,7 +482,7 @@ public class GeneralItemListener implements Listener {
 
         ItemLibrary lib = ItemManager.getLibrary(interaction);
 
-        if(!(lib instanceof PlaceableInteractorItemModule interactorLibrary))
+        if(!(lib instanceof InteractorPlaceableItemLibrary interactorLibrary))
         {
             return;
         }
@@ -472,8 +497,7 @@ public class GeneralItemListener implements Listener {
             return;
         }
 
-
-        interactorLibrary.onInteractorBroken(e, interaction);
+        ItemCallbackManager.invokeEventCallbacks(lib, e, "breaking");
     }
 
     @EventHandler
@@ -484,7 +508,7 @@ public class GeneralItemListener implements Listener {
 
         ItemLibrary lib = ItemManager.getLibrary(interaction);
 
-        if(!(lib instanceof PlaceableInteractorItemModule interactorLibrary))
+        if(!(lib instanceof InteractorPlaceableItemLibrary interactorLibrary))
         {
             return;
         }
@@ -497,7 +521,7 @@ public class GeneralItemListener implements Listener {
             return;
         }
 
-        interactorLibrary.onInteractorInteracted(e, interaction);
+        ItemCallbackManager.invokeEventCallbacks(lib, e, "placeable");
     }
 
     //endregion
@@ -618,7 +642,7 @@ public class GeneralItemListener implements Listener {
     {
         for(Block block : e.getBlocks())
         {
-            if (ItemManager.getLibrary(block) instanceof PlaceableBlockStateItemModule lib)
+            if (ItemManager.getLibrary(block) instanceof BlockStatePlaceableItemLibrary lib)
             {
                 e.setCancelled(true);
             }
@@ -637,9 +661,9 @@ public class GeneralItemListener implements Listener {
     @EventHandler
     public void onDataRemove(CustomBlockDataRemoveEvent e) {
         ItemLibrary lib = ItemManager.getLibrary(e.getBlock());
-        if(lib instanceof PlaceableInteractorItemModule)
+        if(lib instanceof InteractorPlaceableItemLibrary)
         {
-            ((PlaceableInteractorItemModule) lib).naturalBlockBreak(e.getBlock(), true);
+            ((InteractorPlaceableItemLibrary) lib).naturalBlockBreak(e.getBlock(), true);
         }
     }
 
@@ -716,7 +740,7 @@ public class GeneralItemListener implements Listener {
         //get library
         ItemLibrary lib = ItemManager.getLibrary(e.getBlock());
 
-        if(lib instanceof PlaceableInteractorItemModule interactor)
+        if(lib instanceof InteractorPlaceableItemLibrary interactor)
         {
             interactor.naturalBlockBreak(e.getBlock(), true);
         }
@@ -798,22 +822,26 @@ public class GeneralItemListener implements Listener {
 
             if(difference > 0)
             {
-                newLib.onItemEnterPlayerInventorySlot(e);
+                ItemCallbackManager.invokeEventCallbacks(newLib, e);
+                ItemCallbackManager.invokeEventCallbacks(newLib, e, "enter");
             }
             else
             {
-                oldLib.onItemExitPlayerInventorySlot(e);
+                ItemCallbackManager.invokeEventCallbacks(oldLib, e);
+                ItemCallbackManager.invokeEventCallbacks(oldLib, e, "exit");
             }
         }
         else
         {
             if(newIsTracked)
             {
-                newLib.onItemEnterPlayerInventorySlot(e);
+                ItemCallbackManager.invokeEventCallbacks(newLib, e);
+                ItemCallbackManager.invokeEventCallbacks(newLib, e, "enter");
             }
-            if(oldIsTracked)
+            else if(oldIsTracked)
             {
-                oldLib.onItemExitPlayerInventorySlot(e);
+                ItemCallbackManager.invokeEventCallbacks(oldLib, e);
+                ItemCallbackManager.invokeEventCallbacks(oldLib, e, "exit");
             }
         }
     }
@@ -826,7 +854,7 @@ public class GeneralItemListener implements Listener {
         if(lib == null)
             return;
 
-        lib.onPlayerDropItem(e);
+        ItemCallbackManager.invokeEventCallbacks(lib, e);
     }
 
 
@@ -838,10 +866,10 @@ public class GeneralItemListener implements Listener {
         if(lib == null)
             return;
 
-        if(e.getEntity() instanceof Player player)
-            lib.onPlayerPickupItem(e, player);
+        ItemCallbackManager.invokeEventCallbacks(lib, e);
 
-        lib.onEntityPickupItem(e);
+        if(e.getEntity() instanceof Player player)
+            ItemCallbackManager.invokeEventCallbacks(lib, e, "player", player);
     }
 
 

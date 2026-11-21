@@ -1,5 +1,7 @@
 package arnett.customItemsAPI.items.modules.placeable.interactor;
 
+import arnett.customItemsAPI.items.modules.callbacks.ItemEventPriority;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.ItemEvent;
 import arnett.customItemsAPI.items.modules.placeable.BasePlaceableItemModule;
 import arnett.customItemsAPI.items.modules.placeable.PlacementData;
 import arnett.customItemsAPI.items.ItemLibrary;
@@ -9,11 +11,10 @@ import com.jeff_media.customblockdata.CustomBlockData;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.entity.*;
 import org.bukkit.event.Cancellable;
-import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockExplodeEvent;
-import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
@@ -29,12 +30,13 @@ import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import javax.annotation.OverridingMethodsMustInvokeSuper;
+import java.util.List;
 import java.util.UUID;
 
-public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
+public abstract class InteractorPlaceableItemLibrary extends ItemLibrary implements BasePlaceableItemModule {
 
     NamespacedKey InteractorLinkNamespace =  new NamespacedKey("customitems", "linkedinteractor");
+
 
     //region Properties
 
@@ -42,41 +44,91 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
                         -  Properties  -
     =================================================================================================*/
 
-    float height();
-    float width();
+
+    /**
+     * @return Namespaced Key which leads to the block display's resource in a resource pack
+     */
+    public abstract NamespacedKey displayModelKey();
+
+    /**
+     * @return Width of hitbox when placed on wall (Minecraft forces this size on both x and z axis)
+     */
+    public abstract float hitboxHeight();
+
+
+    /**
+     * @return Height of hitbox
+     */
+    public abstract float hitboxWidth();
 
     //endregion
 
 
-    //region Properites
+    //region Optional Properties
 
     /*=================================================================================================
-                        -  Properites  -
+                        -  Optional Properties  -
     =================================================================================================*/
 
-    default Vector hitboxOffset()
+    /**
+     * @return Key to item resource to be used as item display model when placed on wall
+     * (defaults to displayModelKey())
+     */
+    public NamespacedKey wallDisplayModelKey()
+    {
+        return displayModelKey();
+    }
+
+    /**
+     * @return Key to item resource to be used as item display model when placed on wall
+     * (defaults to displayModelKey())
+     */
+    public NamespacedKey roofDisplayModelKey()
+    {
+        return displayModelKey();
+    }
+
+    /**
+     * @return Width of hitbox when placed on wall (Minecraft forces this size on both x and z axis)
+     */
+    public float wallHeight()
+    {
+        return hitboxWidth();
+    }
+
+    /**
+     * @return Height of hitbox when placed on wall
+     */
+    public float wallWidth()
+    {
+        return hitboxHeight();
+    }
+
+    /**
+     * @return Offset of hitbox (on regular axis)
+     */
+    public Vector hitboxOffset()
     {
         return new Vector(.5f, 0, .5f);
     }
 
-    default Vector hitboxWallOffset()
+    /**
+     * @return Offset of hitbox when placed on a wall (on regular axis)
+     */
+    public Vector hitboxWallOffset()
     {
         return new Vector(0, .5f, .5f);
     }
-    default Sound placementSound()
-    {
-        return null;
-    }
 
-    default float wallHeight()
+    /**
+     * returns the dropped items when a custom placement is broken, this combines with the regular block version
+     * @param interaction custom interaction which was broken
+     * @return List of items that will be dropped on breaking
+     */
+    public List<ItemStack> droppedItems(Interaction interaction)
     {
-        return width();
+        return List.of();
     }
-    default float wallWidth()
-    {
-        return height();
-    }
-
 
     //endregion
 
@@ -91,11 +143,11 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
      * Creates an itemDisplay with the given placement data for this item
      * @return UUID of created itemDisplay
      */
-    default UUID createDisplay(PlacementData placementData)
+    public UUID createDisplay(PlacementData placementData)
     {
         //create the display entity at the offset
         ItemDisplay display = placementData.location().getWorld().spawn(
-                placementData.location().clone().add(displayModelOffset()), ItemDisplay.class, (e) -> {
+                placementData.location().clone().add(displayOffset()), ItemDisplay.class, (e) -> {
                     //set an item to display
                     ItemStack toDisplay = new ItemStack(Material.STICK);
 
@@ -143,7 +195,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
      * Creates an itemDisplay with the given placement data for this item
      * @return UUID of created itemDisplay
      */
-    default UUID createDisplay(Location spot, BlockFace against)
+    public UUID createDisplay(Location spot, BlockFace against)
     {
         return createDisplay(new PlacementData(spot, new Quaternionf(), against));
     }
@@ -152,7 +204,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
      * Creates an itemDisplay with the given placement data for this item
      * @return UUID of created itemDisplay
      */
-    default UUID createDisplay(Location spot, BlockPlaceEvent e)
+    public UUID createDisplay(Location spot, BlockPlaceEvent e)
     {
         BlockFace against = e.getBlockPlaced().getFace(e.getBlockAgainst());
         var displaySpot = getPlacementData(spot, e.getPlayer(), against);
@@ -167,7 +219,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
      * Creates an itemDisplay with the given placement data for this item
      * @return UUID of created itemDisplay
      */
-    default UUID createDisplay(Location spot, PlayerInteractEvent e)
+    public UUID createDisplay(Location spot, PlayerInteractEvent e)
     {
         var displaySpot = getPlacementData(spot, e.getPlayer(), e.getBlockFace());
 
@@ -195,7 +247,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
      * @param block block to check
      * @return The interaction entity, or null if not present or block is overriding it (like if it is a solid block)
      */
-    default Interaction getInteraction(Block block)
+    public Interaction getInteraction(Block block)
     {
         if(block.getType().isSolid())
             return null;
@@ -221,7 +273,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
      * @param entity Entity to check
      * @return whether the entity provided is an interactor of this item type
      */
-    default boolean isPlacedItem(Entity entity)
+    public boolean isPlacedItem(Entity entity)
     {
         //start with general entity type check
         if(!(entity instanceof Interaction interaction))
@@ -234,7 +286,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
     /**
      * @return Item Display entity linked to the provided interaction entity (null if none)
      */
-    default ItemDisplay getDisplayEntity(Entity Interactor)
+    public ItemDisplay getDisplayEntity(Entity Interactor)
     {
         return (ItemDisplay) Bukkit.getEntity(getDisplayEntityID(Interactor));
     }
@@ -242,7 +294,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
     /**
      * @return UUID of the Item Display entity linked to the provided interaction entity (null if none)
      */
-    default UUID getDisplayEntityID(Entity Interactor)
+    public UUID getDisplayEntityID(Entity Interactor)
     {
         if(!Interactor.getPersistentDataContainer().has(BasePlaceableItemModule.DisplayLinkNamespace))
             return null;
@@ -263,20 +315,27 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
     =================================================================================================*/
 
 
+    /**
+     * Handles placement logic
+     * @param blockReplaced The block which was replaced with the placed block
+     * @param faceClicked Face of the block which was clicked in the process of placing this
+     * @param itemPlaced The item which placed
+     * @param placer
+     * @param placementEvent generic cancelable placement event
+     * @return was the placement a success
+     */
     @Override
-    default boolean tryPlace(Block blockReplaced, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent) {
+    public boolean place(Block blockReplaced, BlockState oldBlockState, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent, boolean alreadyDroppedItem) {
 
         //get placement location
         Location placeSpot = blockReplaced.getLocation();
 
         //check the block for nearby entities or blocks
-        if((blockReplaced.getType() != Material.AIR &&
-                !blockReplaced.isReplaceable()) ||
+        if((oldBlockState.getType() != Material.AIR &&
+                !oldBlockState.getBlockData().isReplaceable()) ||
                 placeSpot.getWorld().getNearbyEntities(BoundingBox.of(blockReplaced)).stream().anyMatch(
-                        entity -> {
-                            return entity instanceof Interaction interaction &&
-                                    ItemManager.getLibrary(interaction) != null;
-                        }
+                        entity -> entity instanceof Interaction interaction &&
+                                ItemManager.getLibrary(interaction) != null
                 )
         )
         {
@@ -284,7 +343,13 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
         }
 
         //remove the existing block if it was replaced
-        blockReplaced.breakNaturally();
+        if(!alreadyDroppedItem)
+        {
+            blockReplaced.breakNaturally();
+        }
+
+        //set air just to catch any placement
+        blockReplaced.setType(Material.AIR);
 
         //get the display spot now since we're going to need it to create the hitbox
         PlacementData displayInfo = getPlacementData(placeSpot, placer, faceClicked);
@@ -332,7 +397,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
             //if it is on the roof move the hitbox up
             if(displayInfo.faceOn().equals(BlockFace.DOWN))
             {
-                offset.add(new Vector(0, 1 - height(), 0));
+                offset.add(new Vector(0, 1 - hitboxHeight(), 0));
             }
         }
 
@@ -344,8 +409,8 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
         );
 
         //set size of interaction
-        interaction.setInteractionHeight(isOnWall ? wallHeight() : height());
-        interaction.setInteractionWidth(isOnWall ? wallWidth() : width());
+        interaction.setInteractionHeight(isOnWall ? wallHeight() : hitboxHeight());
+        interaction.setInteractionWidth(isOnWall ? wallWidth() : hitboxWidth());
 
         PersistentDataContainer pdc = interaction.getPersistentDataContainer();
 
@@ -389,6 +454,9 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
                 displayInfo.faceOn().ordinal()
         );
 
+        //call other modifications
+        modifyNewPlacementItemData(customBlockData, itemPlaced, placer);
+
         //remove the item if not in creative
         if(placer.getGameMode() != GameMode.CREATIVE)
             itemPlaced.setAmount(itemPlaced.getAmount()-1);
@@ -404,32 +472,6 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
         return true;
     }
 
-    /**
-     * Handles the placement of the item when a placement action is made this custom item
-     * @param e
-     * @param canUseItem
-     */
-    default void handleItemPlacementInteraction(PlayerInteractEvent e, Event.Result canUseItem) {
-        if (canUseItem == Event.Result.DENY)
-            return;
-
-        //cancel the interaction event since we handle it here
-        e.setCancelled(true);
-
-        //gets the block which is being set
-        assert e.getClickedBlock() != null;
-        Block placeAtBlock = e.getClickedBlock().isReplaceable() ?
-                e.getClickedBlock() :
-                e.getClickedBlock().getRelative(e.getBlockFace());
-
-        //try to place
-        if (tryPlace(placeAtBlock, e.getBlockFace(), e.getItem(), e.getPlayer(), e))
-        {
-            //if placement was successful then swing the hand
-            e.getPlayer().swingHand(e.getHand());
-        }
-    }
-
     //endregion
 
 
@@ -440,92 +482,91 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
     =================================================================================================*/
 
     /**
-     * Called when the interaction entity is broken (damaged by other entity).
-     * The other entity is NOT always a player
+     * Called when the interaction entity is broken (damaged by other entity), Before breaking logic is done on LATE priority.
+     * The other entity is NOT always a player. (also .getEntity() should be the interaction paper api isn't that clear here)
      */
-    @OverridingMethodsMustInvokeSuper
-    default void onInteractorBroken(EntityDamageByEntityEvent e, Interaction interactionEntity)
-    {
-        if (e.isCancelled())
-            return;
-
-        naturalBlockBreak(interactionEntity,
-                !(e.getDamager() instanceof Player player) || player.getGameMode() != GameMode.CREATIVE);
-    }
+    @ItemEvent("breaking")
+    public void onInteractorBroken(EntityDamageByEntityEvent e) {}
 
     /**
      * Called when the interaction entity is interacted with by a player
      */
-    default void onInteractorInteracted(PlayerInteractEntityEvent e, Interaction interactionEntity)
-    {
-        return;
-    }
+    @ItemEvent("placeable")
+    public void onInteractorInteracted(PlayerInteractEntityEvent e) {}
 
     /**
-     * Called once an entity explodes with this in the (approximate) radius
+     * Called once an entity explodes with this in the (approximate) radius before explodedLogic runs
+     * @param e the Explosion Bukkit event
+     */
+    @ItemEvent
+    public void onEntityExplode(EntityExplodeEvent e) {}
+
+    /**
+     * Called once a block explodes with this in the radius before explodedLogic runs
+     * @param e the Explosion Bukkit event
+     */
+    @ItemEvent
+    public void onBlockExplode(BlockExplodeEvent e) {}
+
+    /**
+     * Called once an entity explodes with this in the (approximate) radius before explodedLogic runs
      * @param e the Explosion Bukkit event
      * @param customInteraction The custom block which is set to be exploded
-     * @return whether to remove it from the explosion list (if applicable), true = resist, false = explode
      */
-    @OverridingMethodsMustInvokeSuper
-    default void onEntityExplode(EntityExplodeEvent e, Interaction customInteraction)
-    {
-        onExplode(customInteraction);
-    }
+    @ItemEvent("interaction")
+    public void onEntityExplode(EntityExplodeEvent e, Interaction customInteraction) {}
 
     /**
-     * Called once a block explodes with this in the radius (power x 2), by default just calls onExplode
+     * Called once a block explodes with this in the radius before explodedLogic runs
      * @param e the Explosion Bukkit event
      * @param customInteraction The custom block which is set to be exploded
-     * @return whether to remove it from the explosion
-     * list, true = resist, false = explode.
-     * Always returns true by default because if it does get exploded the block breakage is handled
-     * in the onExplode function to drop the custom item.
      */
-    @OverridingMethodsMustInvokeSuper
-    default void onBlockExplode(BlockExplodeEvent e, Interaction customInteraction)
+    @ItemEvent("interaction")
+    public void onBlockExplode(BlockExplodeEvent e, Interaction customInteraction) {}
+
+
+    //endregion
+
+
+    //region Logic By Events
+
+    /*=================================================================================================
+                        -  Logic By Events  -
+    =================================================================================================*/
+
+
+    /**
+     * Called when the interaction entity is broken (damaged by other entity), on LATE priority.
+     * The other entity is NOT always a player
+     */
+    @ItemEvent(value = "breaking", priority = ItemEventPriority.LATE)
+    public void interactorBrokenLogic(EntityDamageByEntityEvent e)
     {
-        onExplode(customInteraction);
+        //call generic breaking event fist
+        onPlacementBroken(e.getEntity().getLocation().getBlock(), e.getDamager(), e);
+
+        if (e.isCancelled())
+            return;
+
+        naturalBlockBreak((Interaction)e.getEntity(),
+                !(e.getDamager() instanceof Player player) || player.getGameMode() != GameMode.CREATIVE);
     }
 
     /**
-     * Called by default when an explosion reaches this block (power x 2).
+     * when an explosion reaches this block.
      * Calls the naturalBreakBlock function if we are not explosion resistant
      */
-    @OverridingMethodsMustInvokeSuper
-    default void onExplode(Interaction explodedInteraction)
+    public void explodedLogic(Cancellable e, Interaction explodedInteraction)
     {
+        if(e.isCancelled())
+            return;
+
         if(!explosionResistant())
         {
             //break it ourselves
             naturalBlockBreak(explodedInteraction, true);
         }
     }
-
-    /**
-     * Called when the block an instance of this custom item's placment is located at is updated by block physics
-     * @param e BlockPhysicsEvent
-     */
-    @Override
-    @OverridingMethodsMustInvokeSuper
-    default void onBlockPhysicsUpdate(BlockPhysicsEvent e) {
-        switch (directionality())
-        {
-            case WallBlock, WallUDBlock, WallDBlock: break;
-            default : return;
-        }
-
-        if(placementDirection(e.getBlock()).getOppositeFace() == e.getBlock().getFace(e.getSourceBlock()))
-        {
-            //attached block broken
-            if(!e.getSourceBlock().isBuildable())
-            {
-                //block is no longer solid so break this
-                naturalBlockBreak(getInteraction(e.getBlock()), true);
-            }
-        }
-    }
-
 
     //endregion
 
@@ -541,7 +582,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
      * Naturally removes the custom block and drops it's items
      * @param blockInteraction the custom block being broken
      */
-    default void naturalBlockBreak(Interaction blockInteraction, boolean dropItem)
+    public void naturalBlockBreak(Interaction blockInteraction, boolean dropItem)
     {
         if(blockInteraction == null)
             return;
@@ -572,9 +613,23 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
                 1f
         );
 
+        System.out.println("BreAKING Interaction");
+
         //then drop the block item if set to
         if(dropItem)
-            dropPlaceableItem(blockInteraction.getLocation());
+        {
+            System.out.println("Dropping it3m " + offsetLocation.toString());
+            var world = blockInteraction.getWorld();
+
+            //interaction drops
+            for (ItemStack droppedItem : droppedItems(blockInteraction)) {
+                world.dropItemNaturally(offsetLocation, droppedItem);
+            }
+            //generic drops
+            for (ItemStack droppedItem : droppedItems(blockInteraction.getLocation().getBlock())) {
+                world.dropItemNaturally(offsetLocation, droppedItem);
+            }
+        }
     }
 
     /**
@@ -582,7 +637,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
      * @param interactionBlock the custom block being broken
      */
     @Override
-    default void naturalBlockBreak(Block interactionBlock, boolean dropItem)
+    public void naturalBlockBreak(Block interactionBlock, boolean dropItem)
     {
         naturalBlockBreak(getInteraction(interactionBlock), dropItem);
     }
@@ -590,7 +645,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
     /**
      * Deletes the interaction placement and the display
      */
-    default void delete(Interaction interaction)
+    public void delete(Interaction interaction)
     {
         //clear the custom data
         new CustomBlockData(interaction.getLocation().getBlock(), CustomItemsAPI.singleton).clear();
@@ -601,7 +656,7 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
     /**
      * Deletes display of the provided interaction entity
      */
-    default void removeLink(Interaction interaction)
+    public void removeLink(Interaction interaction)
     {
         //get the attached entity
         String id = interaction.getPersistentDataContainer().get(BasePlaceableItemModule.DisplayLinkNamespace, PersistentDataType.STRING);
@@ -623,5 +678,23 @@ public interface PlaceableInteractorItemModule extends BasePlaceableItemModule {
 
     //endregion
 
+
+    //region Placement Data
+
+    /*=================================================================================================
+                        -  Placement Data  -
+    =================================================================================================*/
+
+    @Override
+    public PersistentDataContainer getPlacedItemData(Block placedItem) {
+        return getPlacedItemData(getInteraction(placedItem));
+    }
+
+
+    public PersistentDataContainer getPlacedItemData(Interaction placedItem) {
+        return placedItem.getPersistentDataContainer();
+    }
+
+    //endregion
 
 }

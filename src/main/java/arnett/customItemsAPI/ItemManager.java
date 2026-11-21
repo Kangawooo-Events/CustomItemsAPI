@@ -1,6 +1,8 @@
 package arnett.customItemsAPI;
 
 import arnett.customItemsAPI.items.ItemLibrary;
+import arnett.customItemsAPI.items.modules.callbacks.ItemCallbackManager;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.OnRegistration;
 import cd.arnett.caddamands.cattamands.arguments.Cattarameter;
 import cd.arnett.caddamands.cattamands.cattamand.Cattamand;
 import cd.arnett.caddamands.cattamands.cattamand.LiteralCattamand;
@@ -87,6 +89,17 @@ public final class ItemManager {
      */
     public static void registerItems(JavaPlugin plugin, List<ItemLibrary> items)
     {
+
+        items.forEach(item -> {
+            ItemCallbackManager.invokeCallbacks(item, OnRegistration.class);
+
+            //track event callbacks
+            ItemCallbackManager.loadEventCallbacks(item.getClass());
+
+            //track generic callbacks
+            ItemCallbackManager.loadTackedCallbacks(item.getClass());
+        });
+
         //fill items map
         addItems(items);
 

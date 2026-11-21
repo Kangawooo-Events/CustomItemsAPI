@@ -25,9 +25,9 @@ public class PlacementHelper {
     {
         return switch (against) {
 
-            case UP -> new Quaternionf().rotateZ((float)Math.PI);
+            case UP -> new Quaternionf();
 
-            case DOWN -> new Quaternionf();
+            case DOWN -> new Quaternionf().rotateZ((float)Math.PI);
 
             //placed on a wall so base of placed direction
             default -> player.getPitch() > -15 ?
@@ -60,14 +60,15 @@ public class PlacementHelper {
             default  -> {
                 Quaternionf rotation = new Quaternionf();
 
+                rotation.rotateY((float)Math.PI);
+
                 //if the player is looking up, flip the model at this point
                 if(player.getPitch() > -15)
                 {
-                    rotation.rotateY((float)Math.PI);
+                    rotation.rotateZ((float)Math.PI);
                 }
 
-                //rotate it to be placed on the wall
-                yield rotation.rotateX(-(float)Math.PI/2);
+                yield rotation;
             }
         };
     }

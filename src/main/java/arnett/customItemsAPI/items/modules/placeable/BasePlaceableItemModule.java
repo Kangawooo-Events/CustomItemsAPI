@@ -1,22 +1,28 @@
 package arnett.customItemsAPI.items.modules.placeable;
 
 import arnett.customItemsAPI.items.Directionality;
-import arnett.customItemsAPI.CustomItemsAPI;
 import arnett.customItemsAPI.items.modules.ItemModule;
-import com.jeff_media.customblockdata.CustomBlockData;
+import arnett.customItemsAPI.items.modules.callbacks.ItemEventPriority;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.ItemEvent;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.PistonMoveReaction;
 import org.bukkit.entity.*;
 import org.bukkit.event.Cancellable;
+import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockPhysicsEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
+
+import java.util.List;
 
 /**
  * Abstract interface intended to be defined by inheriting interfaces not extended by a class
@@ -29,16 +35,6 @@ public interface BasePlaceableItemModule extends ItemModule {
                     -  Abstract Properties  -
     =================================================================================================*/
 
-
-    /**
-     * @return Namespaced Key which leads to the block display's resource in a resource pack
-     */
-    NamespacedKey displayModelKey();
-
-    /**
-     * @return The reaction this block has when pushed by a Piston
-     */
-    PistonMoveReaction pistonPushable();
 
     /**
      * @return Placement directions this can be placed at
@@ -55,6 +51,12 @@ public interface BasePlaceableItemModule extends ItemModule {
      */
     Sound breakSound();
 
+    /**
+     * @return sound to play when placed
+     */
+    Sound placementSound();
+
+
     //endregion
 
 
@@ -65,6 +67,11 @@ public interface BasePlaceableItemModule extends ItemModule {
     =================================================================================================*/
 
     /**
+     * @return The reaction this block has when pushed by a Piston
+     */
+    default PistonMoveReaction pistonPushable(){return PistonMoveReaction.BLOCK;}
+
+    /**
      * @return The material source for the particles which appear when broken (defaults to the base material)
      */
     default Material breakParticleMaterial()
@@ -73,28 +80,10 @@ public interface BasePlaceableItemModule extends ItemModule {
     }
 
     /**
-     * @return Key to item resource to be used as item display model when placed on wall
-     * (defaults to displayModelKey())
-     */
-    default NamespacedKey wallDisplayModelKey()
-    {
-        return displayModelKey();
-    }
-
-    /**
-     * @return Key to item resource to be used as item display model when placed on wall
-     * (defaults to displayModelKey())
-     */
-    default NamespacedKey roofDisplayModelKey()
-    {
-        return displayModelKey();
-    }
-
-    /**
-     * Defines the offset to place the display model at. Default at .5, .5, .5
+     * Defines the offset to spawn display things at. Default at .5, .5, .5
      * @return value
      */
-    default Vector displayModelOffset() {
+    default Vector displayOffset() {
         return new Vector(.5, .5, .5);
     }
 
@@ -102,6 +91,16 @@ public interface BasePlaceableItemModule extends ItemModule {
      * @return should this block resist explosions (defaults to false)
      */
     default boolean explosionResistant(){return false;}
+
+    /**
+     * returns the dropped items when a custom placement is broken
+     * @param fromBlock custom block where placement was broken
+     * @return
+     */
+    default List<ItemStack> droppedItems(Block fromBlock)
+    {
+        return List.of(getLibrary().getItem());
+    }
 
     //endregion
 
@@ -130,7 +129,6 @@ public interface BasePlaceableItemModule extends ItemModule {
     //endregion
 
 
-    //todo move to custom Display module
     //region placement
 
     /*=================================================================================================
@@ -138,30 +136,58 @@ public interface BasePlaceableItemModule extends ItemModule {
     =================================================================================================*/
 
     /**
-     * Call to try placing this block with the specified parameters
+     * Handles placement logic from an interaction event (non-placeable item used to place). Priority is LATE
+     */
+    @ItemEvent(value = "place", priority = ItemEventPriority.LATE)
+    default void handleInteractionPlacement(PlayerInteractEvent e)
+    {
+        if (e.useItemInHand() == Event.Result.DENY)
+            return;
+
+        //cancel the interaction event since we handle it here
+        e.setCancelled(true);
+
+        //gets the block which is being set
+        assert e.getClickedBlock() != null;
+        Block placeAtBlock = e.getClickedBlock().isReplaceable() ?
+                e.getClickedBlock() :
+                e.getClickedBlock().getRelative(e.getBlockFace());
+
+        //try to place
+        if (place(placeAtBlock, placeAtBlock.getState(), e.getBlockFace(), e.getItem(), e.getPlayer(), e, false))
+        {
+            //if placement was successful then swing the hand and invoke onPlace
+            e.getPlayer().swingHand(e.getHand());
+            onPlaced(placeAtBlock, e.getItem(), e.getPlayer());
+        }
+    }
+
+    /**
+     * Handles placement logic from a place event (placeable item used to place). Priority is LATE
+     */
+    @ItemEvent(priority = ItemEventPriority.LATE)
+    default void handleBlockPlacement(BlockPlaceEvent e)
+    {
+        if(e.isCancelled())
+            return;
+
+        Block placedBlock = e.getBlockPlaced();
+        Block blockAgainst = e.getBlockAgainst();
+        var replaced = e.getBlockReplacedState();
+
+        place(placedBlock, replaced, blockAgainst.getFace(placedBlock), e.getItemInHand(), e.getPlayer(), e, true);
+    }
+
+    /**
+     * Call to try placing this block with the specified parameters. THIS IS THE PLACEMENT LOGIC FUNCTION
      * @param blockReplaced The block which was replaced with the placed block
      * @param faceClicked Face of the block which was clicked in the process of placing this
      * @param itemPlaced The item which placed
      * @param placementEvent generic cancelable placement event
      * @return was the placement a success
      */
-    boolean tryPlace(Block blockReplaced, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent);
+    boolean place(Block blockReplaced, BlockState oldBlockState, BlockFace faceClicked, ItemStack itemPlaced, Player placer, Cancellable placementEvent, boolean alreadyDroppedItem);
 
-    /**
-     * Gets the placement direction of a placed custom block, mostly used for attached block in physics block updates
-     * @param block custom block
-     * @return direction placed
-     */
-    default BlockFace placementDirection(Block block)
-    {
-        Integer face = new CustomBlockData(block, CustomItemsAPI.singleton)
-                .get(placementDirectionNamespace, PersistentDataType.INTEGER);
-
-        if(face == null)
-            return BlockFace.DOWN;
-
-        return BlockFace.values()[face];
-    }
 
 
     /**
@@ -302,11 +328,106 @@ public interface BasePlaceableItemModule extends ItemModule {
                         -  Events  -
     =================================================================================================*/
 
+
     /**
-     * Called to run middle click pick item logic (currently only works for blocks)
+     * Called before this item is middle click picked and the pickItem() function has run on LATE Priotiry.
+     */
+    @ItemEvent
+    default void onPickItem(PlayerPickItemEvent e){}
+
+    /**
+     * Called whenever this block is caught in a block physics update
+     * @param e BlockPhysicsEvent
+     */
+    @ItemEvent
+    default void onBlockPhysicsUpdate(BlockPhysicsEvent e){}
+
+
+    /**
+     * Called whenever a placement interaction is made with an instance of this item. runs before any placement
+     * logic is done (logic is done on LATE priority, this is NORMAL)
+     * @param e PlayerInteractEvent
+     */
+    @ItemEvent("place")
+    default void onPlacementInteraction(PlayerInteractEvent e){}
+
+    /**
+     * Called whenever the placed block is broken, called before break logic is run
+     * @param placedBlock placed block which was broken
+     * @param breaker player who broke the block
+     */
+    default void onPlacementBroken(Block placedBlock, Entity breaker, Cancellable event)
+    {}
+
+
+    /**
+     * Called whenever a placement of this block is successful (Not an Item Event, this has no event attached)
+     * @param blockReplaced The block which was replaced with the placed block
+     * @param itemPlaced The item which placed
+     * @param placer Player placing the block
+     */
+    default void onPlaced(Block blockReplaced, ItemStack itemPlaced, Player placer){}
+
+
+    //endregion
+
+
+    //region Logic by Events
+
+    /*=================================================================================================
+                        -  Logic by Events  -
+    =================================================================================================*/
+
+
+    /**
+     * Called by default when an explosion reaches this block.
+     * Calls the naturalBreakBlock function if we are not explosion resistant
+     */
+    default void explodedLogic(Cancellable e, Block explodedBlock)
+    {
+        if(e.isCancelled())
+            return;
+
+        if(!explosionResistant())
+        {
+            //break it ourselves
+            naturalBlockBreak(explodedBlock, true);
+        }
+    }
+
+
+    //endregion
+
+
+    //region Breaking
+
+    /*=================================================================================================
+                        -  Breaking  -
+    =================================================================================================*/
+
+    /**
+     * Call to break this custom block naturally at the given block location
+     * @param block block location of the custom placement
+     * @param dropItem should this drop an item
+     */
+    void naturalBlockBreak(Block block, boolean dropItem);
+
+    //endregion
+
+
+    //region Picking
+
+    /*=================================================================================================
+                        -  Picking  -
+    =================================================================================================*/
+
+
+    /**
+     * Called to run middle click pick item logic on LATE priority (currently only works for blocks)
      * @param e pick item event
      */
-    //todo make copy for interaction types aswell later
+    //todo make copy for interaction types as well
+    @ItemEvent(priority = ItemEventPriority.LATE)
     default void pickItem(PlayerPickItemEvent e)
     {
         if(e.isCancelled())
@@ -365,56 +486,30 @@ public interface BasePlaceableItemModule extends ItemModule {
         e.getPlayer().getInventory().setItemInMainHand(library.getItem());
     }
 
-    /**
-     * Called whenever this item is dropped from a block breaking
-     */
-    void onPlaceableDropItem(Item droppedItem);
-
-    /**
-     * Called whenever this block is caught in a block physics update
-     * @param e BlockPhysicsEvent
-     */
-    void onBlockPhysicsUpdate(BlockPhysicsEvent e);
-
-    /**
-     * Called whenever a placement of this block is successful
-     * @param blockReplaced The block which was replaced with the placed block
-     * @param itemPlaced The item which placed
-     * @param placer Player placing the block
-     */
-    void onPlaced(Block blockReplaced, ItemStack itemPlaced, Player placer);
-
 
     //endregion
 
 
-    //region Breaking
+    //region Placement data
 
     /*=================================================================================================
-                        -  Breaking  -
+                        -  Placement data  -
     =================================================================================================*/
 
+
     /**
-     * Call to break this custom block naturally at the given block location
-     * @param block block location of the custom placement
-     * @param dropItem should this drop an item
+     * Gets the data container of the placed block, may return null if placed data tracking if fasle
      */
-    void naturalBlockBreak(Block block, boolean dropItem);
+    PersistentDataContainer getPlacedItemData(Block placedItem);
 
 
     /**
-     * Call to drop an instance of this item at the given location
+     * Called to modify the placed item data
+     * @param pdc placed Item data
+     * @param placedItem item used to place
      */
-    default void dropPlaceableItem(Location breakSpot)
-    {
-        //drop the item of the base material and call on BlockDrop item for consistency
-        //because this is what it would normally look like if the player broke a block
-        breakSpot.getWorld().dropItemNaturally(
-                breakSpot,
-                new ItemStack(getLibrary().getItem()),
-                this::onPlaceableDropItem
-        );
-    }
+    default void modifyNewPlacementItemData(PersistentDataContainer pdc, ItemStack placedItem, Player placer){}
+
 
     //endregion
 

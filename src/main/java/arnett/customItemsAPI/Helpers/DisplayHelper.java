@@ -9,12 +9,14 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.world.scores.TeamColor;
 import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.Optional;
 
 public class DisplayHelper {
 
@@ -64,10 +66,10 @@ public class DisplayHelper {
         List<SynchedEntityData.DataValue<?>> glowingData = List.of(SynchedEntityData.DataValue.create(entityFlagAccessor, flags));
 
         //create custom team
-        PlayerTeam glowTeam = new PlayerTeam(glowScoreboard, (color.getName() + "_Glow"));
+        PlayerTeam glowTeam = new PlayerTeam(glowScoreboard, (color.name() + "_Glow"));
 
         //set the color of the team (which will be the glow color)
-        glowTeam.setColor(color);
+        glowTeam.setColor(Optional.ofNullable(TeamColor.byName(color.name())));
 
         //tell client to create or remove team
         cPlayer.connection.send(
@@ -126,7 +128,7 @@ public class DisplayHelper {
                 case "PURPLE" -> ChatFormatting.DARK_PURPLE;
                 case "MAGENTA" -> ChatFormatting.LIGHT_PURPLE;
                 case "PINK" -> ChatFormatting.LIGHT_PURPLE;
-                default -> ChatFormatting.getByHexValue(Integer.parseInt(color.substring(0, 6), 16));
+                default -> ChatFormatting.valueOf(String.valueOf(Integer.parseInt(color.substring(0, 6), 16)));
             };
 
         }
