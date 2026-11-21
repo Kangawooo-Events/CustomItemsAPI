@@ -227,7 +227,6 @@ public interface BasePlaceableItemModule extends ItemModule {
             case WallD -> {
                 rotation = PlacementHelper.placeNESW(player, against);
                 rotation.mul(PlacementHelper.placeWallD(against));
-                rotation.mul(PlacementHelper.placeWallDirectional(player, against));
             }
 
             case WallUD -> {

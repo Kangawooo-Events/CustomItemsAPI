@@ -31,7 +31,7 @@ import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
@@ -113,7 +113,7 @@ public class GeneralItemListener implements Listener {
     }
 
     @EventHandler
-    public void onInteractEntity(PlayerInteractEntityEvent e)
+    public void onInteractEntity(PlayerInteractAtEntityEvent e)
     {
         //get item used
         ItemStack used = e.getPlayer().getInventory().getItem(e.getHand());
@@ -501,7 +501,7 @@ public class GeneralItemListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerInteractEntity(PlayerInteractEntityEvent e)
+    public void onPlayerInteractEntity(PlayerInteractAtEntityEvent e)
     {
         if(!(e.getRightClicked() instanceof Interaction interaction))
             return;

@@ -18,6 +18,7 @@ import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -128,6 +129,11 @@ public abstract class InteractorPlaceableItemLibrary extends ItemLibrary impleme
     public List<ItemStack> droppedItems(Interaction interaction)
     {
         return List.of();
+    }
+
+    @Override
+    public Material placementMaterial() {
+        return Material.AIR;
     }
 
     //endregion
@@ -492,7 +498,7 @@ public abstract class InteractorPlaceableItemLibrary extends ItemLibrary impleme
      * Called when the interaction entity is interacted with by a player
      */
     @ItemEvent("placeable")
-    public void onInteractorInteracted(PlayerInteractEntityEvent e) {}
+    public void onInteractorInteracted(PlayerInteractAtEntityEvent e) {}
 
     /**
      * Called once an entity explodes with this in the (approximate) radius before explodedLogic runs

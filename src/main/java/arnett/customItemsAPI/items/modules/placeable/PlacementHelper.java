@@ -227,8 +227,17 @@ public class PlacementHelper {
     {
         return switch (against)
         {
-            case DOWN -> new Quaternionf();
-            default  -> new Quaternionf().rotateX(-(float)Math.PI/2);
+            //if this is aginst the floor do nothing
+            case UP -> new Quaternionf();
+
+
+            default  -> {
+                Quaternionf rotation = new Quaternionf();
+
+                rotation.rotateY((float)Math.PI);
+
+                yield rotation;
+            }
         };
     }
 

@@ -99,13 +99,13 @@ public class ItemCallbackManager {
 
             for (ItemEvent annotation : sortedAnnotations)
             {
-                System.out.println("REGISTERING CALLBACK " + annotation.value());
                 var first = method.getParameterTypes()[0];
                 if (Event.class.isAssignableFrom(first))
                 {
                     //add it to the event callbacks by its first parameter type which should be an event extension
                     eventCallbacks.row(library).computeIfAbsent((Class<? extends Event>) first,
                             ann -> new LinkedHashMap<>()).put(method, annotation);
+                    System.out.println("REGISTERING CALLBACK " + first.getSimpleName() + ":" + annotation.value());
                     break;
                 }
                 else
@@ -124,9 +124,11 @@ public class ItemCallbackManager {
      */
     public static void invokeEventCallbacks(ItemLibrary library, Event event, String altTag, Object... params)
     {
-        System.out.println("Invoking Callback " + library.name() + " " + event.getEventName() + ":" + altTag);
 
-        eventCallbacks.row(library.getClass()).getOrDefault(event.getClass(), new LinkedHashMap<>(0)).forEach((method, annotation) -> {
+        var callbacks = eventCallbacks.row(library.getClass()).getOrDefault(event.getClass(), new LinkedHashMap<>(0));
+        System.out.println("Invoking Callback " + library.name() + " " + event.getEventName() + ":" + altTag + " - " + callbacks.size());
+
+        callbacks.forEach((method, annotation) -> {
 
             if(!annotation.value().equals(altTag))
                 return;
