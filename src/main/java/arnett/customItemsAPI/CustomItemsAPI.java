@@ -5,6 +5,9 @@ import arnett.customItemsAPI.items.modules.callbacks.ItemCallbackManager;
 import arnett.customItemsAPI.items.data.annotations.ProvideDataEntry;
 import arnett.customItemsAPI.items.data.annotations.ProvidePlacementDataEntry;
 import arnett.customItemsAPI.items.modules.callbacks.annotations.ModifyNewItemMeta;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.OnBlockDropItems;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.OnInteractionDropItems;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.OnInteractionPlaced;
 import com.jeff_media.customblockdata.CustomBlockData;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -60,6 +63,10 @@ public final class CustomItemsAPI extends JavaPlugin {
         ItemCallbackManager.trackAnnotation(ProvideDataEntry.class);
         ItemCallbackManager.trackAnnotation(ProvidePlacementDataEntry.class);
         ItemCallbackManager.trackAnnotation(ModifyNewItemMeta.class);
+        ItemCallbackManager.trackAnnotation(ProvideDataEntry.class);
+        ItemCallbackManager.trackAnnotation(OnInteractionPlaced.class);
+        ItemCallbackManager.trackAnnotation(OnBlockDropItems.class);
+        ItemCallbackManager.trackAnnotation(OnInteractionDropItems.class);
 
     }
 

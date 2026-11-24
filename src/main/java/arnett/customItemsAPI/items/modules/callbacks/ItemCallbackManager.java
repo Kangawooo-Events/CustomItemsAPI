@@ -54,6 +54,16 @@ public class ItemCallbackManager {
             MethodUtils.getOverrideHierarchy(method, ClassUtils.Interfaces.INCLUDE).forEach(higherarchyMethod -> {
                 annotations.addAll(Arrays.asList(higherarchyMethod.getAnnotations()));
             });
+
+            for (Annotation annotation : annotations) {
+                if(trackedAnnotationTypes.contains(annotation.annotationType()))
+                {
+                    trackedCallbacks.row(clazz).computeIfAbsent(
+                            annotation.annotationType(),
+                            (a) -> new HashMap<>()
+                    ).put(method, annotation);
+                }
+            }
         }
     }
     /**
@@ -65,7 +75,10 @@ public class ItemCallbackManager {
      */
     public static void invokeCallbacks(Object object, Class<? extends Annotation> type, BiConsumer<Object, Annotation> foreachResult, Object... params)
     {
-        trackedCallbacks.row(object.getClass()).getOrDefault(type, new HashMap<>(0)).forEach((method, annotation) -> {
+        var callbacks = trackedCallbacks.row(object.getClass()).getOrDefault(type, new HashMap<>(0));
+        System.out.println("Invoking Callback " + object.getClass().getSimpleName() + ":" + type.getTypeName() + " - " + callbacks.size());
+
+        callbacks.forEach((method, annotation) -> {
             try {
                 if(foreachResult != null)
                     foreachResult.accept(method.invoke(object, params), annotation);
@@ -158,6 +171,7 @@ public class ItemCallbackManager {
                 {
                     System.err.println("Mismatch in size, sent: " + params.length + ", needed: " + method.getParameterTypes().length);
                 }
+                e.printStackTrace();
             }
         });
     }

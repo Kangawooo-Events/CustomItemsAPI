@@ -1,6 +1,8 @@
 package arnett.customItemsAPI.items.modules.placeable.blockState;
 
+import arnett.customItemsAPI.items.modules.callbacks.ItemCallbackManager;
 import arnett.customItemsAPI.items.modules.callbacks.annotations.ItemEvent;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.OnBlockDropItems;
 import arnett.customItemsAPI.items.modules.placeable.BasePlaceableItemModule;
 import arnett.customItemsAPI.items.ItemLibrary;
 import arnett.customItemsAPI.CustomItemsAPI;
@@ -12,7 +14,6 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
-import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
@@ -20,6 +21,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class BlockStatePlaceableItemLibrary extends ItemLibrary implements BasePlaceableItemModule {
 
@@ -263,7 +267,21 @@ public abstract class BlockStatePlaceableItemLibrary extends ItemLibrary impleme
             var world = brokenBlock.getWorld();
 
             //generic drops
-            for (ItemStack droppedItem : droppedItems(brokenBlock)) {
+            for (ItemStack droppedItem : basicDroppedItems(brokenBlock)) {
+                world.dropItemNaturally(offsetLocation, droppedItem);
+            }
+
+            //get callback items
+            ArrayList<ItemStack> CallbackItems = new ArrayList<>();
+            ItemCallbackManager.invokeCallbacks(
+                    this,
+                    OnBlockDropItems.class,
+                    (a, ann) -> CallbackItems.addAll((List<ItemStack>)a),
+                    brokenBlock
+            );
+
+            //drop callback items
+            for (ItemStack droppedItem : CallbackItems) {
                 world.dropItemNaturally(offsetLocation, droppedItem);
             }
         }

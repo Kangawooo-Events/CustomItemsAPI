@@ -56,6 +56,12 @@ public interface BasePlaceableItemModule extends ItemModule {
      */
     Sound placementSound();
 
+    /**
+     * returns the dropped items when a custom placement is broken
+     * @param fromBlock custom block where placement was broken
+     * @return List of Dropped Items
+     */
+    List<ItemStack> basicDroppedItems(Block fromBlock);
 
     //endregion
 
@@ -91,16 +97,6 @@ public interface BasePlaceableItemModule extends ItemModule {
      * @return should this block resist explosions (defaults to false)
      */
     default boolean explosionResistant(){return false;}
-
-    /**
-     * returns the dropped items when a custom placement is broken
-     * @param fromBlock custom block where placement was broken
-     * @return
-     */
-    default List<ItemStack> droppedItems(Block fromBlock)
-    {
-        return List.of(getLibrary().getItem());
-    }
 
     //endregion
 
@@ -356,7 +352,9 @@ public interface BasePlaceableItemModule extends ItemModule {
      * @param breaker player who broke the block
      */
     default void onPlacementBroken(Block placedBlock, Entity breaker, Cancellable event)
-    {}
+    {
+
+    }
 
 
     /**
@@ -365,7 +363,10 @@ public interface BasePlaceableItemModule extends ItemModule {
      * @param itemPlaced The item which placed
      * @param placer Player placing the block
      */
-    default void onPlaced(Block blockReplaced, ItemStack itemPlaced, Player placer){}
+    default void onPlaced(Block blockReplaced, ItemStack itemPlaced, Player placer)
+    {
+
+    }
 
 
     //endregion

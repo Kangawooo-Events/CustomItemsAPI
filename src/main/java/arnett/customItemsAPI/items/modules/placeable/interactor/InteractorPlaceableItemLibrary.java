@@ -1,7 +1,11 @@
 package arnett.customItemsAPI.items.modules.placeable.interactor;
 
+import arnett.customItemsAPI.items.modules.callbacks.ItemCallbackManager;
 import arnett.customItemsAPI.items.modules.callbacks.ItemEventPriority;
 import arnett.customItemsAPI.items.modules.callbacks.annotations.ItemEvent;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.OnBlockDropItems;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.OnInteractionDropItems;
+import arnett.customItemsAPI.items.modules.callbacks.annotations.OnInteractionPlaced;
 import arnett.customItemsAPI.items.modules.placeable.BasePlaceableItemModule;
 import arnett.customItemsAPI.items.modules.placeable.PlacementData;
 import arnett.customItemsAPI.items.ItemLibrary;
@@ -19,7 +23,6 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -31,6 +34,7 @@ import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -474,6 +478,7 @@ public abstract class InteractorPlaceableItemLibrary extends ItemLibrary impleme
 
         //call anything set to happen when the block is placed
         onPlaced(blockReplaced, itemPlaced, placer);
+        ItemCallbackManager.invokeCallbacks(this, OnInteractionPlaced.class, null, interaction, itemPlaced, placer);
 
         return true;
     }
@@ -530,6 +535,13 @@ public abstract class InteractorPlaceableItemLibrary extends ItemLibrary impleme
     @ItemEvent("interaction")
     public void onBlockExplode(BlockExplodeEvent e, Interaction customInteraction) {}
 
+    /**
+     * Called after the interaction is placed
+     * @param interaction interaction which was placed
+     * @param placer player who placed the interaction
+     */
+    @OnInteractionPlaced
+    public void onPlaced(Interaction interaction, ItemStack placed, Player placer){}
 
     //endregion
 
@@ -624,15 +636,37 @@ public abstract class InteractorPlaceableItemLibrary extends ItemLibrary impleme
         //then drop the block item if set to
         if(dropItem)
         {
-            System.out.println("Dropping it3m " + offsetLocation.toString());
+            System.out.println("Dropping it3m " + offsetLocation);
             var world = blockInteraction.getWorld();
+            Block block = blockInteraction.getLocation().getBlock();
 
             //interaction drops
             for (ItemStack droppedItem : droppedItems(blockInteraction)) {
                 world.dropItemNaturally(offsetLocation, droppedItem);
             }
             //generic drops
-            for (ItemStack droppedItem : droppedItems(blockInteraction.getLocation().getBlock())) {
+            for (ItemStack droppedItem : basicDroppedItems(block)) {
+                world.dropItemNaturally(offsetLocation, droppedItem);
+            }
+
+
+            //get callback items
+            ArrayList<ItemStack> CallbackItems = new ArrayList<>();
+            ItemCallbackManager.invokeCallbacks(
+                    this,
+                    OnBlockDropItems.class,
+                    (a, ann) -> CallbackItems.addAll((List<ItemStack>)a),
+                    block
+            );
+            ItemCallbackManager.invokeCallbacks(
+                    this,
+                    OnInteractionDropItems.class,
+                    (a, ann) -> CallbackItems.addAll((List<ItemStack>)a),
+                    blockInteraction
+            );
+
+            //drop callback items
+            for (ItemStack droppedItem : CallbackItems) {
                 world.dropItemNaturally(offsetLocation, droppedItem);
             }
         }
