@@ -60,6 +60,12 @@ public abstract class InteractorPlaceableItemLibrary extends ItemLibrary impleme
      */
     public abstract float hitboxHeight();
 
+    /**
+     * returns the dropped items when a custom placement is broken, this combines with the regular block version
+     * @param interaction custom interaction which was broken
+     * @return List of items that will be dropped on breaking
+     */
+    public abstract List<ItemStack> basicDroppedItems(Interaction interaction);
 
     /**
      * @return Height of hitbox
@@ -125,12 +131,6 @@ public abstract class InteractorPlaceableItemLibrary extends ItemLibrary impleme
         return new Vector(0, .5f, .5f);
     }
 
-    /**
-     * returns the dropped items when a custom placement is broken, this combines with the regular block version
-     * @param interaction custom interaction which was broken
-     * @return List of items that will be dropped on breaking
-     */
-    abstract List<ItemStack> basicDroppedItems(Interaction interaction);
 
     @Override
     public List<ItemStack> basicDroppedItems(Block fromBlock) {
