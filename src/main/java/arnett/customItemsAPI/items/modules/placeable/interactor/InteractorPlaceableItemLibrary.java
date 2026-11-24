@@ -130,8 +130,10 @@ public abstract class InteractorPlaceableItemLibrary extends ItemLibrary impleme
      * @param interaction custom interaction which was broken
      * @return List of items that will be dropped on breaking
      */
-    public List<ItemStack> droppedItems(Interaction interaction)
-    {
+    abstract List<ItemStack> basicDroppedItems(Interaction interaction);
+
+    @Override
+    public List<ItemStack> basicDroppedItems(Block fromBlock) {
         return List.of();
     }
 
@@ -632,6 +634,7 @@ public abstract class InteractorPlaceableItemLibrary extends ItemLibrary impleme
         );
 
         System.out.println("BreAKING Interaction");
+        System.out.println("BreAKING Interaction");
 
         //then drop the block item if set to
         if(dropItem)
@@ -641,7 +644,7 @@ public abstract class InteractorPlaceableItemLibrary extends ItemLibrary impleme
             Block block = blockInteraction.getLocation().getBlock();
 
             //interaction drops
-            for (ItemStack droppedItem : droppedItems(blockInteraction)) {
+            for (ItemStack droppedItem : basicDroppedItems(blockInteraction)) {
                 world.dropItemNaturally(offsetLocation, droppedItem);
             }
             //generic drops
